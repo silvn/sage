@@ -1,1 +1,0 @@
-../../external/jquery/dist/jquery.min.js
