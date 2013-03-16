@@ -1,5 +1,5 @@
 language: "node_js"
 before_install:
-    - "source iris.env"
-install: "iris install modules"
-script: "iris check"
+    - "source sage.env"
+install: "sage install modules"
+script: "sage check"
