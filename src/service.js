@@ -7,9 +7,7 @@
 
 var util = require('util');
 
-function Service() {
-    
-}
+function Service() { }
 
 Service.extend = function (args) {
     var Extended = function () {
@@ -19,6 +17,14 @@ Service.extend = function (args) {
     };
     util.inherits(Extended, Service);
     return Extended;
+};
+
+Service.prototype.start = function (params) {
+    params = params || {};
+    if (params.port === undefined) {
+        throw new Error("port is a required parameter");
+    }
+    return this;
 };
 
 module.exports = Service;
