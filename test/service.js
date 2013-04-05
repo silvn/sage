@@ -28,22 +28,53 @@ describe("Service.start()", function () {
         (function () { service.start(); }).should.throw();
         (function () { service.start(7000); }).should.throw();
     });
-    it("should work with a specified port", function () {
-        service.start({ port: 7000 }).should.be.ok;
+    it("should 'listen' to a specified port", function (done) {
+        var lService = new Service();
+        lService.server().listen = function (port) {
+            port.should.equal(7000);
+            done();
+        };
+        lService.start({ port: 7000 }).should.be.ok;
+        lService.stop();
+    });
+    it("should complain on already-started service", function () {
+        service.start({ port: 7000 });
+        (function () { service.start({ port: 7000 }); }).should.throw();
+        service.stop();
     });
 });
 
-describe("live service", function () {
+describe("Service.stop()", function () {
     var service = new Service();
-    it("should handle index route", function (done) {
-        var server = service.server();
+    it("should fail on unstarted service", function () {
+        (function () { service.stop(); }).should.throw();
+    });
+    it("should work when service started", function () {
+        service.start({ port: 7000 });
+        service.stop().should.be.ok;
+    });
+});
+
+describe("Index route", function () {
+    var service = new Service();
+    var server = service.server();
+    it("should handle GET", function (done) {
         supertest(server)
             .get('/')
-            .expect(206)
             .end(function (err, res) {
-                (err).should.be.null;
+                [err].should.be.null;
                 res.status.should.equal(200);
                 res.body.should.be.null; // FIXME: Should return something
+                done();
+            }
+        );
+    });
+    it("should handle HEAD", function (done) {
+        supertest(server)
+            .head('/')
+            .end(function (err, res) {
+                [err].should.be.null;
+                res.status.should.equal(200);
                 done();
             }
         );
