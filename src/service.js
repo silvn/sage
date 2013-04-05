@@ -55,10 +55,15 @@ Service.prototype.stop = function () {
         self.restify.close();
     });
     return this;
-}
+};
 
 Service.prototype.server = function () {
     return this.restify;
+};
+
+Service.prototype.get = function () {
+    this.restify.get.apply(this.restify, arguments);
+    return this;
 };
 
 module.exports = Service;

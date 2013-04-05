@@ -20,6 +20,22 @@ describe("service", function () {
         var service = new Service();
         service.should.be.an.instanceOf(Service);
     });
+    it("should allow definition of new routes", function (done) {
+        var service = new Service();
+        var server = service.server();
+        service.get('/somepath', function (req, res) {
+            res.send({ result: "yay" });
+        });
+        supertest(server)
+            .get('/somepath')
+            .end(function (err, res) {
+                [err].should.be.null;
+                res.status.should.equal(200);
+                res.body.should.eql({ result: "yay" });
+                done();
+            }
+        );
+    });    
 });
 
 describe("Service.start()", function () {
