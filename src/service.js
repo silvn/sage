@@ -34,14 +34,13 @@ Service.prototype.start = function (params) {
     if (params.port === undefined) {
         throw new Error("port is a required parameter");
     }
-    if (this.started) {
-        throw new Error("service is already running on port", this.started);
+    if (this.restify.address() !== null) {
+        throw new Error("service already running at " + this.restify.address());
     }
     var deferred = Q.defer();
     this.restify.listen(params.port, function () {
         deferred.resolve(true);
     });
-    this.started = params.port;
     this.startedPromise = deferred.promise;
     return this;
 };
@@ -53,6 +52,7 @@ Service.prototype.stop = function () {
     }
     this.startedPromise.done(function () {
         self.restify.close();
+        this.started = undefined;
     });
     return this;
 };
@@ -63,6 +63,21 @@ Service.prototype.server = function () {
 
 Service.prototype.get = function () {
     this.restify.get.apply(this.restify, arguments);
+    return this;
+};
+
+Service.prototype.head = function () {
+    this.restify.head.apply(this.restify, arguments);
+    return this;
+};
+
+Service.prototype.post = function () {
+    this.restify.post.apply(this.restify, arguments);
+    return this;
+};
+
+Service.prototype.put = function () {
+    this.restify.put.apply(this.restify, arguments);
     return this;
 };
 

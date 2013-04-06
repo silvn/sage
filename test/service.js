@@ -1,8 +1,25 @@
 var supertest = require("supertest");
 var express   = require("express");
 var util      = require("util");
+var async     = require("async");
 
 var Service   = require("../src/service");
+
+function testMethod(method, done) {
+    var service = new Service();
+    var server = service.server();
+    var send = function (req, res) {
+        res.send({ result: "yay" });
+    };
+    service[method]('/apath', send);
+    supertest(server)[method]('/apath')
+        .end(function (err, res) {
+            [err].should.be.null;
+            res.status.should.equal(200);
+            res.body.should.eql({ result: "yay" });
+            done();
+        });
+}
 
 describe("service", function () {
     it("should be a function", function () {
@@ -20,22 +37,19 @@ describe("service", function () {
         var service = new Service();
         service.should.be.an.instanceOf(Service);
     });
-    it("should allow definition of new routes", function (done) {
-        var service = new Service();
-        var server = service.server();
-        service.get('/somepath', function (req, res) {
-            res.send({ result: "yay" });
-        });
-        supertest(server)
-            .get('/somepath')
-            .end(function (err, res) {
-                [err].should.be.null;
-                res.status.should.equal(200);
-                res.body.should.eql({ result: "yay" });
-                done();
-            }
-        );
-    });    
+    it("should support GET methods", function (done) {
+        testMethod('get', done);
+    });
+    it("should support POST methods", function (done) {
+        testMethod('post', done);
+    });
+    it("should support PUT methods", function (done) {
+        testMethod('put', done);
+    });
+    // FIXME: For some reason HEAD response has empty body (shouldn't be).
+    // it("should support HEAD methods", function (done) {
+    //     testMethod('head', done);
+    // });
 });
 
 describe("Service.start()", function () {
