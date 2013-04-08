@@ -5,18 +5,19 @@ var async     = require("async");
 
 var Service   = require("../src/service");
 
-function testMethod(method, done) {
+function testMethod(method, done, expectBody) {
     var service = new Service();
     var server = service.server();
+    expectBody = expectBody || { result: "yay" };
     var send = function (req, res) {
-        res.send({ result: "yay" });
+        res.send(expectBody);
     };
     service[method]('/apath', send);
     supertest(server)[method]('/apath')
         .end(function (err, res) {
             [err].should.be.null;
             res.status.should.equal(200);
-            res.body.should.eql({ result: "yay" });
+            res.body.should.eql(expectBody);
             done();
         });
 }
@@ -46,10 +47,9 @@ describe("service", function () {
     it("should support PUT methods", function (done) {
         testMethod('put', done);
     });
-    // FIXME: For some reason HEAD response has empty body (shouldn't be).
-    // it("should support HEAD methods", function (done) {
-    //     testMethod('head', done);
-    // });
+    it("should support HEAD methods", function (done) {
+        testMethod('head', done, {});
+    });
 });
 
 describe("Service.start()", function () {
