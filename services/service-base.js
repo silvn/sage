@@ -14,8 +14,8 @@ var silent = 'production' == process.env.NODE_ENV;
 // Module dependencies
 var express = require('express')
   , routes  = require(path.join(IRIS_HOME, 'routes'))
-  , gzip    = require('connect-gzip')
-  , app     = express(gzip.gzip())
+  , gzippo  = require('gzippo')
+  , app     = express()
   , http    = require('http')
   , util    = require('util')
   , fs      = require('fs');
@@ -122,6 +122,7 @@ function usage(msg) {
 
 /******************* CONFIGURATION *******************/
 
+app.use(gzippo.compress());
 app.use(express.bodyParser());
 app.use(express.methodOverride());
 app.use(express.cookieParser('your secret here'));
