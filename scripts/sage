@@ -2,12 +2,13 @@
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 SAGE_HOME=${SAGE_HOME:-`cd $SCRIPTDIR/.. && pwd -P`}
+BASEDIR=.
 SNAPDRAGON_HOME=${SNAPDRAGON_HOME:-$SAGE_HOME/external/snapdragon}
 NODEDIR=$SAGE_HOME
-CONFDIR=$SAGE_HOME/conf
-SVC_DIR=$NODEDIR/services
-SVC_CONF=$CONFDIR/services.json
-LOGDIR=$SAGE_HOME/logs
+CONFDIR=${CONFDIR:-$BASEDIR/conf}
+SVCDIR=${SVCDIR:-$BASEDIR/services}
+SVC_CONF=${SVC_CONF:-$CONFDIR/services.json}
+LOGDIR=$BASEDIR/logs
 PIDFILE=$LOGDIR/sage.pid
 SVCPIDFILE=$LOGDIR/service.%%.pid
 INSTALL_LOG=$LOGDIR/install.log
@@ -19,17 +20,17 @@ HEADING_COLOR=2
 SAGE_USAGE='sage [options] <command> [<arguments>]
     
 Available commands:
-    check       Ensure that Iris is ready to go
+    check       Ensure that Sage is ready to go
     env         Get/Set the environment
     examples    Install example data
     help        This command
-    install     Install dependencies required by Iris
-    open        Open up an Iris session (Mac only, for now)
-    restart     Restart Iris
+    install     Install dependencies required by Sage
+    open        Open up an Sage session (Mac only, for now)
+    restart     Restart Sage
     services    Lists available services
-    start       Start Iris
-    status      Check whether or not Iris is running
-    stop        Stop Iris
+    start       Start Sage
+    status      Check whether or not Sage is running
+    stop        Stop Sage
     
 "sage help <command>" shows help on specific commands.'
 
@@ -148,7 +149,7 @@ function _start_services {
             local pidfile=`_svc_pidfile $name`
             local pid=`_running_pid $pidfile`
             NODE_PORT=$port node \
-                $SVC_DIR/$nodefile $CONFDIR/$conffile $name "$log" &
+                $SVCDIR/$nodefile $CONFDIR/$conffile $name "$log" &
             echo $! > $pidfile
         done
         wait
@@ -160,14 +161,14 @@ function _start_services {
 function _start_all_sage {
     local pid=`_sage_pid`
     if [ -n "$pid" ]; then
-        echo "Iris is already running (pid `cat $PIDFILE`)"
+        echo "Sage is already running (pid `cat $PIDFILE`)"
     else
         _start_services
         if [ -n "$sagepid" ]; then
             echo $sagepid > $PIDFILE
             sage_cmd_status
         else
-            echo "Error launching Iris"
+            echo "Error launching Sage"
         fi
     fi
 }
@@ -223,14 +224,14 @@ function _kill {
 }
 
 # ===========================================================================
-# Iris commands
+# Sage commands
 
 # ---------------------------------------------------------------------------
 # SAGE START
 # ---------------------------------------------------------------------------
 _help_start="sage start [<service>]
 
-Starts Iris services. With no arguments, starts all services.
+Starts Sage services. With no arguments, starts all services.
     <service>   Start a specific service"
 function sage_cmd_start {
     local svc=$1
@@ -257,7 +258,7 @@ function sage_cmd_start {
 # ---------------------------------------------------------------------------
 _help_stop="sage stop [<service>]
 
-Stops Iris services. With no arguments, stops all of Iris.
+Stops Sage services. With no arguments, stops all of Sage.
     <service>   Stop a specific service"
 function sage_cmd_stop {
     local svc=$1
@@ -278,7 +279,7 @@ function sage_cmd_stop {
     else
         local sagepid=`_sage_pid`
         if [ -z "$sagepid" ]; then
-            echo "Iris does not appear to be running. Nothing to stop."
+            echo "Sage does not appear to be running. Nothing to stop."
         else
             for pidfile in `_svc_pidfile '*'`; do
                 local pid=`_running_pid $pidfile`
@@ -297,7 +298,7 @@ function sage_cmd_stop {
 # ---------------------------------------------------------------------------
 _help_install="sage install [-q] [<component>]
 
-Installs various components and dependencies required by Iris. If <component> 
+Installs various components and dependencies required by Sage. If <component> 
 is specified, only that component is installed. All output from the various 
 installations is redirected to
     $INSTALL_LOG
@@ -405,7 +406,7 @@ HELP
 # ---------------------------------------------------------------------------
 _help_env="sage env [<environment>]
 
-Get or set the Iris environment. The environment indicates whether Iris is used 
+Get or set the Sage environment. The environment indicates whether Sage is used 
 in production or development mode. With no argument, just lists the current 
 environment. With an argument, sets that environment and any associated parameters.
 
@@ -443,7 +444,7 @@ function sage_cmd_env {
 # ---------------------------------------------------------------------------
 _help_open="sage open [<service>]
 
-Opens a browser window with the Iris website. This option is currently only 
+Opens a browser window with the Sage website. This option is currently only 
 supported by Mac (Srsly, why would you use anything else?).
 
     <service>   The web service to open in a browser (default: 'proxy')"
@@ -487,9 +488,9 @@ function sage_cmd_status {
     else
         pid=`_sage_pid`
         if [ -z "$pid" ]; then
-            echo "Iris is not running."
+            echo "Sage is not running."
         else
-            echo "Iris is running as process $pid with the following services:"
+            echo "Sage is running as process $pid with the following services:"
         fi
         sage_cmd_services | while read line
         do
@@ -511,7 +512,7 @@ function sage_cmd_status {
 # ---------------------------------------------------------------------------
 _help_services="sage services [<service>]
 
-Lists available service currently configured with Iris (not *running* services).
+Lists available service currently configured with Sage (not *running* services).
 
     <service>   Only show configuration for specified service
 
@@ -554,7 +555,7 @@ function sage_cmd_services {
 # ---------------------------------------------------------------------------
 _help_restart="sage restart [<service>]
 
-Restarts Iris services. With no arguments, restarts all services.
+Restarts Sage services. With no arguments, restarts all services.
 
     <service>   Restart a specific service"
 function sage_cmd_restart {
@@ -598,14 +599,14 @@ function sage_cmd_examples {
 # ---------------------------------------------------------------------------
 _help_check="sage check [<component>]
 
-Checks to ensure the Iris installation is complete and ready to go. With no
+Checks to ensure the Sage installation is complete and ready to go. With no
 argument, runs all component checks.
 
 The following modules are supported:
 
-    unit        Only run the Iris unit tests
+    unit        Only run the Sage unit tests
     files       Only check file structure
-    integration Only run Iris integration tests"
+    integration Only run Sage integration tests"
 function sage_cmd_check {
     local component=$1
     
@@ -635,13 +636,13 @@ function sage_cmd_check {
         if [ -e "$SVC_CONF" -a \
             -n "$( (/usr/bin/python -mjson.tool <$SVC_CONF>/dev/null) 2>&1)" ]
         then
-            add_error "Service configuration '${SVC_CONF##$SAGE_HOME/}' is
+            add_error "Service configuration '${SVC_CONF##$BINDIR/}' is
                        not valid JSON."
         fi
 
         # Ensure 'logs' is writable
         if [ -e "$LOGDIR" -a ! -w "$LOGDIR" ]; then
-            add_error "Log directory '${LOGDIR##$SAGE_HOME/}' 
+            add_error "Log directory '${LOGDIR##$BINDIR/}' 
                        exists but is not writable."
         fi
 
