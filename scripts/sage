@@ -3,7 +3,6 @@
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 SAGE_HOME=${SAGE_HOME:-`cd $SCRIPTDIR/.. && pwd -P`}
 BASEDIR=.
-SNAPDRAGON_HOME=${SNAPDRAGON_HOME:-$SAGE_HOME/external/snapdragon}
 NODEDIR=$SAGE_HOME
 CONFDIR=${CONFDIR:-$BASEDIR/conf}
 SVCDIR=${SVCDIR:-$BASEDIR/services}
@@ -296,20 +295,15 @@ function sage_cmd_stop {
 # ---------------------------------------------------------------------------
 # SAGE INSTALL
 # ---------------------------------------------------------------------------
-_help_install="sage install [-q] [<component>]
+_help_install="sage install [-q]
 
-Installs various components and dependencies required by Sage. If <component> 
-is specified, only that component is installed. All output from the various 
-installations is redirected to
+Installs various components and dependencies required by Sage. All output
+from the various installations is redirected to
     $INSTALL_LOG
     
 Options:
     -q          Suppress friendly messages to the shell
-
-The following components are available:
-
-    modules     Various modules required by Node.js
-    snapdragon  Compiles the Snapdragon library"
+"
 function sage_cmd_install {
     local verbose=1
     while getopts "q" opt; do
@@ -323,17 +317,6 @@ function sage_cmd_install {
         shift
     done
 
-    local component=$1
-    if [ -n "$component" ]; then
-        if [ "$component" != 'snapdragon' -a \
-             "$component" != 'modules' ]; then
-            echo "Install component '$component' is not recognized!"
-            sage_cmd_help install
-        fi
-    else
-        component="all"
-    fi
-    
     cd $SAGE_HOME
     cat <<LOG_HEADER >> $INSTALL_LOG
 =======================================
@@ -345,29 +328,10 @@ LOG_HEADER
     [ "$verbose" -eq 1 ] && echo "Installing Git modules..."
     git submodule update --recursive --init 2>&1 >> $INSTALL_LOG
 
-    if [ "$component" == "all" -o "$component" == "modules" ]; then
-        [ "$verbose" -eq 1 ] && echo "Installing Node modules..."
-        # Install Node.js dependencies
-        cd $NODEDIR
-        npm install 2>&1 >> $INSTALL_LOG
-    fi
-
-    if [ "$component" == "all" -o "$component" == "snapdragon" ]; then
-        shift
-        [ "$verbose" -eq 1 ] &&
-            echo "Compiling Snapdragon... (Hang on. This might take a while.)"
-        # Install Snapdragon
-        cd $SNAPDRAGON_HOME
-        git submodule update --init 2>&1 >> $INSTALL_LOG
-        ./configure --enable-xopt --without-java \
-            --prefix $SNAPDRAGON_HOME "$@" 2>&1 >> $INSTALL_LOG
-        make 2>&1 >> $INSTALL_LOG # Now take a [long] coffee break:
-                                  # or "make -j 8" to parallelize using 8 cores
-        make check 2>&1 >> $INSTALL_LOG
-        make install 2>&1 >> $INSTALL_LOG
-        cd node/fastbit_addon
-        $GYP rebuild 2>&1 >> $INSTALL_LOG
-    fi
+    [ "$verbose" -eq 1 ] && echo "Installing Node modules..."
+    # Install Node.js dependencies
+    cd $NODEDIR
+    npm install 2>&1 | grep -v "No repository field" >> $INSTALL_LOG
 }
 
 # ---------------------------------------------------------------------------
