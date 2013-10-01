@@ -2,7 +2,7 @@
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 SAGE_HOME=${SAGE_HOME:-`cd $SCRIPTDIR/.. && pwd -P`}
-BASEDIR=.
+BASEDIR=$PWD
 NODEDIR=$SAGE_HOME
 CONFDIR=${CONFDIR:-$BASEDIR/conf}
 SVCDIR=${SVCDIR:-$BASEDIR/services}
@@ -595,7 +595,6 @@ function sage_cmd_check {
     
     if [ "$component" == "all" -o "$component" == "files" ]; then
 
-
         # Ensure services.json is valid JSON
         if [ -e "$SVC_CONF" -a \
             -n "$( (/usr/bin/python -mjson.tool <$SVC_CONF>/dev/null) 2>&1)" ]
@@ -633,6 +632,30 @@ function sage_cmd_check {
          "$component" == "integration" ]; then
         make test
     fi
+}
+
+function prkeyval () {
+    key=$1
+    val=$2
+    indent=$3
+    tput bold; printf "%-${indent}s" "$1"; tput sgr0;
+    echo $2
+}
+
+
+# ---------------------------------------------------------------------------
+# SAGE INFO
+# ---------------------------------------------------------------------------
+_help_check="sage info
+
+Provides general info about the installation."
+function sage_cmd_info {
+    indent=15
+    _json_lookup SAGE_VERSION $SAGE_HOME/package.json version
+    prkeyval "Sage directory:" "$BASEDIR"      $indent
+    prkeyval "Sage script:"    "$0"            $indent
+    prkeyval "Configuration:"  "$SVC_CONF"     $indent
+    prkeyval "Version:"        "$SAGE_VERSION" $indent
 }
 
 # 'MAIN'
