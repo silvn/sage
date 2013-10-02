@@ -154,7 +154,7 @@ function _start_services {
             local service=($line)
             local port=${service[0]}
             local name=${service[1]}
-            local nodefile=`_abspath ${service[2]})`
+            local nodefile=`_abspath ${service[2]}`
             local log=$LOGDIR/$name.log
             rm -f "$log"
             local pidfile=`_svc_pidfile $name`
