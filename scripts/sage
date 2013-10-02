@@ -75,7 +75,7 @@ function _json_flatten {
             var o = JSON.parse(j);
             o[p.argv[1]].forEach(function (e) {
                 if (!p.argv[3] || e["name"] == p.argv[3])
-                    console.log(f.map(function (l) { return e[l]; }).join(" "));
+                    console.log(f.map(function (l) { return e[l] || "undefined"; }).join(" "));
             });
         });
         p.stdin.on("error", function (e) { console.error(e); });
@@ -154,17 +154,19 @@ function _start_services {
             local service=($line)
             local port=${service[0]}
             local name=${service[1]}
-            local nodefile=`_abspath ${service[2]}`
+            local controller=`_abspath ${service[2]}`
             local log=$LOGDIR/$name.log
             rm -f "$log"
             local pidfile=`_svc_pidfile $name`
             local pid=`_running_pid $pidfile`
-            node $SAGEDIR/scripts/start-service.js \
-                --port    $port \
-                --service $nodefile \
-                --name    $name \
-                --log     "$log" &
-            echo $! > $pidfile
+            if [ $controller != "undefined" ]; then
+                node $SAGEDIR/scripts/start-service.js \
+                    --port    $port \
+                    --service $controller \
+                    --name    $name \
+                    --log     "$log" &
+                echo $! > $pidfile
+            fi
         done
         wait
     ) &
@@ -508,8 +510,7 @@ function sage_cmd_services {
     [ -z "$hostname" ] && hostname=$DEFAULT_HOSTNAME
     local services
     _json_flatten services $SAGESVCCONF services \
-        'port name nodefile config hostname' "$name"
-    
+        'port name controller host' "$name"
     if [ -z "$services" ]; then
         [ -n "$name" ] && _error "Service '$name' is not configured."
         return
@@ -523,7 +524,7 @@ function sage_cmd_services {
     fi
     echo "$services" | while read line; do
         local svc=($line)
-        if [ -z "${svc[3]}" ]; then
+        if [ "${svc[3]}" == "undefined" ]; then
             svc[3]=$hostname
         fi
         printf "$outfmt" ${svc[@]}
