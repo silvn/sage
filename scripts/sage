@@ -5,7 +5,6 @@ SAGE_HOME=${SAGE_HOME:-`cd $SCRIPTDIR/.. && pwd -P`}
 BASEDIR=$PWD
 NODEDIR=$SAGE_HOME
 CONFDIR=${CONFDIR:-$BASEDIR/conf}
-SVCDIR=${SVCDIR:-$BASEDIR/services}
 SVC_CONF=${SVC_CONF:-$CONFDIR/services.json}
 LOGDIR=$BASEDIR/logs
 PIDFILE=$LOGDIR/sage.pid
@@ -46,6 +45,10 @@ function _error {
     if [[ "$details" ]]; then
         printf "\n\e[;1mDetails:\e[0m %s\n" "$details"
     fi
+}
+
+function _abspath {
+    echo $(cd $(dirname $1); pwd)/$(basename $1)
 }
 
 function _json_flatten {
@@ -141,14 +144,16 @@ function _start_services {
             local service=($line)
             local port=${service[0]}
             local name=${service[1]}
-            local nodefile=${service[2]}
-            local conffile=${service[3]}
+            local nodefile=`_abspath ${service[2]})`
             local log=$LOGDIR/$name.log
             rm -f "$log"
             local pidfile=`_svc_pidfile $name`
             local pid=`_running_pid $pidfile`
-            NODE_PORT=$port node \
-                $SVCDIR/$nodefile $CONFDIR/$conffile $name "$log" &
+            node $SAGE_HOME/scripts/start-service.js \
+                --port    $port \
+                --service $nodefile \
+                --name    $name \
+                --log     "$log" &
             echo $! > $pidfile
         done
         wait
@@ -184,7 +189,7 @@ function _find_service {
 
 function _service_url {
     local svc=($@)
-    echo "http://${svc[4]}:${svc[0]}"
+    echo "http://${svc[3]}:${svc[0]}"
 }
 
 function _service_status {
@@ -498,17 +503,17 @@ function sage_cmd_services {
         [ -n "$name" ] && _error "Service '$name' is not configured."
         return
     fi
-    local outfmt='%-5s %-18s %-20s %-25s %s\n'
+    local outfmt='%-5s %-18s %-25s %-25s %s\n'
     # If called directly from command-line, show header
     if [ "$cmd" == "services" ]; then
         tput setaf $HEADING_COLOR
-        printf "$outfmt" PORT NAME FILE CONF ADDRESS
+        printf "$outfmt" PORT NAME FILE ADDRESS
         tput sgr0
     fi
     echo "$services" | while read line; do
         local svc=($line)
-        if [ -z "${svc[4]}" ]; then
-            svc[4]=$hostname
+        if [ -z "${svc[3]}" ]; then
+            svc[3]=$hostname
         fi
         printf "$outfmt" ${svc[@]}
     done
@@ -650,9 +655,9 @@ _help_check="sage info
 
 Provides general info about the installation."
 function sage_cmd_info {
-    indent=15
+    indent=18
     _json_lookup SAGE_VERSION $SAGE_HOME/package.json version
-    prkeyval "Sage directory:" "$BASEDIR"      $indent
+    prkeyval "Sage directory:" "$SAGE_HOME"    $indent
     prkeyval "Sage script:"    "$0"            $indent
     prkeyval "Configuration:"  "$SVC_CONF"     $indent
     prkeyval "Version:"        "$SAGE_VERSION" $indent

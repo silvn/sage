@@ -1,5 +1,4 @@
-var IRIS_HOME = __dirname + '/..';
-var IRIS_BIN  = IRIS_HOME + '/bin';
+// TODO: Remove this file!
 var IRIS_DATA = IRIS_HOME + '/fastbit/data';
 
 var development = {
