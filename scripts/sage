@@ -1,16 +1,16 @@
 #!/bin/bash
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-SAGE_HOME=${SAGE_HOME:-`cd $SCRIPTDIR/.. && pwd -P`}
+SAGEDIR=${SAGEDIR:-`cd $SCRIPTDIR/.. && pwd -P`}
 BASEDIR=$PWD
-NODEDIR=$SAGE_HOME
-CONFDIR=${CONFDIR:-$BASEDIR/conf}
-SVC_CONF=${SVC_CONF:-$CONFDIR/services.json}
+NODEDIR=$SAGEDIR
+SAGECONFDIR=${SAGECONFDIR:-$BASEDIR/conf}
+SAGESVCCONF=${SAGESVCCONF:-$SAGECONFDIR/services.json}
 LOGDIR=$BASEDIR/logs
 PIDFILE=$LOGDIR/sage.pid
 SVCPIDFILE=$LOGDIR/service.%%.pid
 INSTALL_LOG=$LOGDIR/install.log
-GYP=$SAGE_HOME/node_modules/.bin/node-gyp
+GYP=$SAGEDIR/node_modules/.bin/node-gyp
 DEFAULT_HOSTNAME=0.0.0.0
 WHOAMI=`whoami`
 HEADING_COLOR=2
@@ -20,6 +20,7 @@ SAGE_USAGE='sage [options] <command> [<arguments>]
 Available commands:
     check       Ensure that Sage is ready to go
     env         Get/Set the environment
+    info        Some useful information about the setup
     examples    Install example data
     help        This command
     install     Install dependencies required by Sage
@@ -49,6 +50,15 @@ function _error {
 
 function _abspath {
     echo $(cd $(dirname $1); pwd)/$(basename $1)
+}
+
+function _sage_env {
+    local env=$1
+    if [ -n "$env" ]; then
+        echo "$env" > $SAGEDIR/.sageenv
+    else
+        echo $(<$SAGEDIR/.sageenv)
+    fi
 }
 
 function _json_flatten {
@@ -120,8 +130,8 @@ function _svc_pidfile {
 
 function _start_services {
     local svc=$1
-    if [ ! -e "$SVC_CONF" ]; then
-        echo "Service configuration [$SVC_CONF] cannot be found!" 2> /dev/stderr
+    if [ ! -e "$SAGESVCCONF" ]; then
+        echo "Service configuration [$SAGESVCCONF] cannot be found!" 2> /dev/stderr
         sage_cmd_help
         exit 1
     fi
@@ -149,7 +159,7 @@ function _start_services {
             rm -f "$log"
             local pidfile=`_svc_pidfile $name`
             local pid=`_running_pid $pidfile`
-            node $SAGE_HOME/scripts/start-service.js \
+            node $SAGEDIR/scripts/start-service.js \
                 --port    $port \
                 --service $nodefile \
                 --name    $name \
@@ -322,7 +332,7 @@ function sage_cmd_install {
         shift
     done
 
-    cd $SAGE_HOME
+    cd $SAGEDIR
     cat <<LOG_HEADER >> $INSTALL_LOG
 =======================================
 Installation - $component - `date`
@@ -386,25 +396,26 @@ environment. With an argument, sets that environment and any associated paramete
 function sage_cmd_env {
     local env=$1
     if [ -n "$env" ]; then
-        cd $SAGE_HOME/root/js
         case $env in
             dev)
-                rm -f sage.js
-                ln -s sage-dev.js sage.js
+                _sage_env dev
                 ;;
             prod)
-                rm -f sage.js
-                echo "Compressing core Javascript..."
-                echo "[FIXME: Not doing anything yet]"
+                _sage_env prod
                 ;;
             *)
                 echo "The environment '$env' is not supported"
                 exit 1
                 ;;
         esac
-        echo "Set the environment to '$env'"
+        echo "Set the environment to '`_sage_env`'"
     else
-        echo "The current environment is"
+        env=`_sage_env`
+        if [ -z "$env" ]; then
+            env=dev
+            _sage_env $env
+        fi
+        echo "The current environment is '$env'"
     fi
 }
 
@@ -488,15 +499,15 @@ Lists available service currently configured with Sage (not *running* services).
 See also: 'sage status'"
 function sage_cmd_services {
     local name=$1
-    if [ ! -e "$SVC_CONF" ]; then
-        echo "File $SVC_CONF does not exist!" > /dev/stderr
+    if [ ! -e "$SAGESVCCONF" ]; then
+        echo "File $SAGESVCCONF does not exist!" > /dev/stderr
         exit 1
     fi
     local hostname;
-    _json_lookup hostname $SVC_CONF 'settings hostname'
+    _json_lookup hostname $SAGESVCCONF 'settings hostname'
     [ -z "$hostname" ] && hostname=$DEFAULT_HOSTNAME
     local services
-    _json_flatten services $SVC_CONF services \
+    _json_flatten services $SAGESVCCONF services \
         'port name nodefile config hostname' "$name"
     
     if [ -z "$services" ]; then
@@ -542,7 +553,7 @@ Install example data."
 function sage_cmd_examples {
     local overwrite=$1
     EXAMPLEDIR=./examples
-    cd $SAGE_HOME
+    cd $SAGEDIR
     git submodule update --init -- $EXAMPLEDIR > /dev/null
     cd $EXAMPLEDIR
     if [ -z "$(which mongorestore 2> /dev/null)" ]; then
@@ -590,7 +601,7 @@ function sage_cmd_check {
         component="all"
     fi
 
-    cd $SAGE_HOME
+    cd $SAGEDIR
     local errnum=0
     declare -a errors=()
     function add_error {
@@ -601,10 +612,10 @@ function sage_cmd_check {
     if [ "$component" == "all" -o "$component" == "files" ]; then
 
         # Ensure services.json is valid JSON
-        if [ -e "$SVC_CONF" -a \
-            -n "$( (/usr/bin/python -mjson.tool <$SVC_CONF>/dev/null) 2>&1)" ]
+        if [ -e "$SAGESVCCONF" -a \
+            -n "$( (/usr/bin/python -mjson.tool <$SAGESVCCONF>/dev/null) 2>&1)" ]
         then
-            add_error "Service configuration '${SVC_CONF##$BINDIR/}' is
+            add_error "Service configuration '${SAGESVCCONF##$BINDIR/}' is
                        not valid JSON."
         fi
 
@@ -656,11 +667,12 @@ _help_check="sage info
 Provides general info about the installation."
 function sage_cmd_info {
     indent=18
-    _json_lookup SAGE_VERSION $SAGE_HOME/package.json version
-    prkeyval "Sage directory:" "$SAGE_HOME"    $indent
+    _json_lookup SAGEVERSION $SAGEDIR/package.json version
+    prkeyval "Sage directory:" "$SAGEDIR"      $indent
     prkeyval "Sage script:"    "$0"            $indent
-    prkeyval "Configuration:"  "$SVC_CONF"     $indent
-    prkeyval "Version:"        "$SAGE_VERSION" $indent
+    prkeyval "Configuration:"  "$SAGECONFDIR"  $indent
+    prkeyval "Environment:"    "$SAGEENV"      $indent
+    prkeyval "Version:"        "$SAGEVERSION"  $indent
 }
 
 # 'MAIN'

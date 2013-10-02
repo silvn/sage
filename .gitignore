@@ -2,3 +2,4 @@ node_modules
 .tm_properties
 logs
 build
+.sageenv
