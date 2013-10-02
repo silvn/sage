@@ -1,46 +1,13 @@
 {
     "settings" : {
-        "hostname" : "0.0.0.0"
+        "hostname"      : "0.0.0.0",
+        "registry-port" : 7243
     },
-    "endpoints": {
-        "proxy" : {
-            "examples" : {
-                "paths" : [ "/gwas", "/phenotypes", "/species", "/pcoords" ]
-            }
-        },
-        "examples" : {
-            "examples-fastbit" : {
-                "type": "fastbit", "paths" : [ "/gwas", "/pcoords" ]
-            },
-            "examples-mongo" : {
-                "type": "mongo", "paths" : [ "/phenotypes" ]
-            }
-        }
-    }, 
     "services": [
         {
-            "config": "app-config.js",
-            "name": "proxy", 
-            "nodefile": "proxy.js",
-            "port": 4747
-        }, 
-        {
-            "config": "examples-config.js", 
-            "name": "examples", 
-            "nodefile": "examples.js", 
-            "port": 4748
-        }, 
-        {
-            "config": "examples-config.js", 
-            "name": "examples-fastbit", 
-            "nodefile": "fastbit.js", 
-            "port": 4749
-        }, 
-        {
-            "config": "examples-config.js", 
-            "name": "examples-mongo", 
-            "nodefile": "mongo.js", 
-            "port": 4750
+            "name"       : "proxy", 
+            "controller" : "services/proxy.js",
+            "port"       : 4747
         }
     ]
 }
