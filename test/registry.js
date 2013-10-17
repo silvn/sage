@@ -14,3 +14,20 @@ describe("registry", function () {
         Registry.should.be.an.instanceOf(Service);
     })
 });
+
+describe("Registry index", function () {
+    var server = Registry.server();
+    it("should return an object", function (done) {
+        supertest(server)
+            .get('/')
+            .end(function (err, res) {
+                [err].should.be.null;
+                res.status.should.equal(200);
+                res.body.should.equal({
+                    services: []
+                });
+                done();
+            }
+        );
+    });
+});

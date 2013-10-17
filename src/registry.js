@@ -1,5 +1,11 @@
 var Service = require(__dirname + "/service.js");
 
-var service = new Service();
+var Registry = new Service();
 
-module.exports = service;
+Registry.get("/", function (req, res, next) {
+    res.send({
+        services: []
+    });
+});
+
+module.exports = Registry;
