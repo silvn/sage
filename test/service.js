@@ -110,3 +110,20 @@ describe("Index route", function () {
         );
     });
 });
+
+describe("Service.get", function () {
+    var service = new Service();
+    var server = service.server();
+    it("should allow a new route with parameters", function (done) {
+        service.get("/resource/:id", function (req, res) {
+            req.params.id.should.equal("9722");
+            res.send("Yes! " + req.params.id);
+        });
+        supertest(server).get("/resource/9722").end(
+            function (err, res) {
+                res.body.should.eql("Yes! 9722");
+                done();
+            }
+        );
+    });
+})
