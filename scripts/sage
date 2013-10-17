@@ -159,6 +159,9 @@ function _start_services {
             rm -f "$log"
             local pidfile=`_svc_pidfile $name`
             local pid=`_running_pid $pidfile`
+            if [ $name == "registry" ]; then
+                controller=$SAGEDIR/src/registry.js
+            fi
             if [ $controller != "undefined" ]; then
                 controller=`_abspath $controller`
                 node $SAGEDIR/scripts/start-service.js \
