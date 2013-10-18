@@ -12,6 +12,7 @@ var Q       = require('q');
 function Service(properties) {
     this.props = (properties || {});
     this.restify = restify.createServer();
+    this.restify.use(restify.bodyParser());
 }
 
 Service.extend = function (args) {

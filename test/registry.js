@@ -9,6 +9,9 @@ var Service   = require("../src/service");
 function testRoute(route, body, done) {
     supertest(Registry).get(route).end(function (err, res) {
         [err].should.be.null;
+        if (res.status !== 200) {
+            console.dir(res);
+        }
         res.status.should.equal(200);
         res.body.should.eql(body);
         done();
@@ -21,7 +24,11 @@ describe("registry", function () {
     });
     it("should be an instance of Service", function () {
         Registry.should.be.an.instanceOf(Service);
-    })
+    });
+    it("should be a singleton", function () {
+        var Registry2 = require("../src/registry");
+        Registry.should.equal(Registry2);
+    });
     it("should return a default index route", function (done) {
         testRoute("/", { services: [] }, done);
     });
@@ -37,5 +44,23 @@ describe("registry", function () {
             { name: "service1" },
             { prop1: "prop1Value" }
         ]}, done);
+    });
+    it("should allow services to be cleared", function (done) {
+        Registry.reset.should.be.a.Function;
+        Registry.reset();
+        testRoute("/", { services: [] }, done);
+    });
+    it("should allow services to be registered over HTTP", function (done) {
+        var service = new Service({ name: "newService" });
+        var request = supertest(Registry);
+        request
+            .post("/service")
+            .set('Accept', 'application/json')
+            .send(service.properties())
+            .end(function (err, res) {
+                [err].should.be.null;
+                res.status.should.equal(200);
+                testRoute("/", { services: [ { name: "newService" } ] }, done);
+            });
     });
 });
