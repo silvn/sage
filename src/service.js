@@ -11,12 +11,6 @@ var Q       = require('q');
 
 function Service() {
     this.restify = restify.createServer();
-    this.restify.get('/',  function (req, res, next) {
-        res.end();
-    });
-    this.restify.head('/', function (req, res, next) {
-        res.end();
-    });
 }
 
 Service.extend = function (args) {
@@ -29,6 +23,17 @@ Service.extend = function (args) {
     return Extended;
 };
 
+function ensureDefaultRoutes(service) {
+    service.get('/',  function (req, res, next) {
+        res.send();
+        return next();
+    });
+    service.head('/', function (req, res, next) {
+        res.send();
+        return next();
+    });
+}
+
 Service.prototype.start = function (params) {
     params = params || {};
     if (params.port === undefined) {
@@ -38,7 +43,7 @@ Service.prototype.start = function (params) {
         throw new Error("service already running at " + this.restify.address());
     }
     var deferred = Q.defer();
-    this.restify.listen(params.port, function () {
+    this.listen(params.port, function () {
         deferred.resolve(true);
     });
     this.startedPromise = deferred.promise;
@@ -57,9 +62,14 @@ Service.prototype.stop = function () {
     return this;
 };
 
-Service.prototype.server = function () {
-    return this.restify;
+Service.prototype.address = function () {
+    return this.restify.address.apply(this.restify, arguments);
 };
+
+Service.prototype.listen = function () {
+    ensureDefaultRoutes(this);
+    return this.restify.listen.apply(this.restify, arguments);
+}
 
 Service.prototype.get = function () {
     this.restify.get.apply(this.restify, arguments);
