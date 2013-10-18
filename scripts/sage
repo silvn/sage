@@ -39,6 +39,10 @@ mkdir -p $LOGDIR
 # ===========================================================================
 # Private utility functions
 
+function define {
+    IFS='\n' read -r -d '' ${1} || true;
+}
+
 function _error {
     local message=$1
     local details=$2
@@ -176,6 +180,33 @@ function _start_services {
     ) &
     sleep 1
     sagepid=$!
+    register_services $svc
+}
+
+function register_services {
+    local svc=$1
+    local services=$(sage_cmd_services $svc)
+    local reg_svc=($(sage_cmd_services registry))
+    local reg_url="http://${reg_svc[3]}:${reg_svc[0]}"
+    echo "$services" | (while read line
+        do
+            local service=($line)
+            local port=${service[0]}
+            local name=${service[1]}
+            local host=${service[3]}
+            if [ "$name" == "registry" ]; then
+                continue;
+            fi
+            define payload <<EOJSON
+{ "name" : "$name", "port": "$port", "host": "$host" }
+EOJSON
+            local response=$(curl -is -H "Content-type: application/json" \
+                -X POST -d "$payload" "$reg_url/service")
+            if [ $(grep -c '200 OK' <<< "$response") -eq 0 ]; then
+                _error "Could not register service $name:\n$response"
+            fi
+        done
+    )
 }
 
 function _start_all_sage {
@@ -512,12 +543,20 @@ function sage_cmd_services {
     local hostname;
     _json_lookup hostname $SAGESVCCONF 'settings hostname'
     [ -z "$hostname" ] && hostname=$DEFAULT_HOSTNAME
+    local registry_port
     local services
     _json_flatten services $SAGESVCCONF services \
         'port name controller host' "$name"
+    _json_lookup registry_port $SAGESVCCONF 'settings registry-port'
     if [ -z "$services" ]; then
-        [ -n "$name" ] && _error "Service '$name' is not configured."
-        return
+        if [ -n "$name" ] && [ "$name" != "registry" ]; then
+            _error "Service '$name' is not configured."
+            return
+        fi
+        services="$registry_port registry undefined $hostname"
+    else
+    services="$services
+$registry_port registry undefined $hostname"
     fi
     local outfmt='%-5s %-18s %-25s %-25s %s\n'
     # If called directly from command-line, show header
@@ -533,9 +572,6 @@ function sage_cmd_services {
         fi
         printf "$outfmt" ${svc[@]}
     done
-    # Print registry too
-    _json_lookup registry_port $SAGESVCCONF 'settings registry-port'
-    printf "$outfmt" $registry_port registry undefined $hostname
 }
 
 # ---------------------------------------------------------------------------
