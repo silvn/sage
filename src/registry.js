@@ -9,7 +9,7 @@ Registry.get("/", function (req, res, next) {
     var json = {};
     for (var id in services) {
         var service = services[id];
-        json["/service/" + id] = service;
+        json[Registry.url() + "/service/" + id] = service;
     }
     res.send({ services: json });
     next();
