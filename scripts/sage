@@ -154,12 +154,16 @@ function _start_services {
             local service=($line)
             local port=${service[0]}
             local name=${service[1]}
-            local controller=`_abspath ${service[2]}`
+            local controller=${service[2]}
             local log=$LOGDIR/$name.log
             rm -f "$log"
             local pidfile=`_svc_pidfile $name`
             local pid=`_running_pid $pidfile`
+            if [ $name == "registry" ]; then
+                controller=$SAGEDIR/src/registry.js
+            fi
             if [ $controller != "undefined" ]; then
+                controller=`_abspath $controller`
                 node $SAGEDIR/scripts/start-service.js \
                     --port    $port \
                     --service $controller \
@@ -519,7 +523,7 @@ function sage_cmd_services {
     # If called directly from command-line, show header
     if [ "$cmd" == "services" ]; then
         tput setaf $HEADING_COLOR
-        printf "$outfmt" PORT NAME FILE ADDRESS
+        printf "$outfmt" PORT NAME CONTROLLER ADDRESS
         tput sgr0
     fi
     echo "$services" | while read line; do
@@ -529,6 +533,9 @@ function sage_cmd_services {
         fi
         printf "$outfmt" ${svc[@]}
     done
+    # Print registry too
+    _json_lookup registry_port $SAGESVCCONF 'settings registry-port'
+    printf "$outfmt" $registry_port registry undefined $hostname
 }
 
 # ---------------------------------------------------------------------------
