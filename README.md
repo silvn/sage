@@ -1,5 +1,5 @@
 # Sage
-**Version 0.0.3**
+**Version 0.0.4**
 
 A REST service architecture for scientific data.
 
@@ -68,6 +68,10 @@ The `sage` tool has a general and command-specific help facility. To find out mo
 TODO
 
 ##Changelog
+
+####v0.0.4
+
+* [CHANGE] Using resource URIs for services
 
 ####v0.0.3
 

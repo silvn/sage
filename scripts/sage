@@ -139,17 +139,13 @@ function _start_services {
         sage_cmd_help
         exit 1
     fi
-    local services=$(sage_cmd_services $svc)
-    local priverror=$(echo "$services" | while read line; do
-        local service=($line)
-        if [ "${service[0]}" -le 1024 -a $WHOAMI != "root" ]; then
-            echo "Service '${service[1]}' requires root privileges."
-        fi
-    done)
-    if [ -n "$priverror" ]; then
-        echo $priverror
-        _error "Please rerun 'sage start' as root!"
+    local services
+    local retvalue
+    if ! retvalue=$(sage_cmd_services $svc); then
+        echo "$retvalue"
         exit 1
+    else
+        services=$retvalue
     fi
 
     echo "Starting services..."
@@ -548,10 +544,14 @@ function sage_cmd_services {
     _json_flatten services $SAGESVCCONF services \
         'port name controller host' "$name"
     _json_lookup registry_port $SAGESVCCONF 'settings registry-port'
+    if [ -z "$registry_port" ] || [ "$registry_port" == "undefined" ]; then
+        _error "No registry configured in $SAGESVCCONF!"
+        exit 1
+    fi
     if [ -z "$services" ]; then
         if [ -n "$name" ] && [ "$name" != "registry" ]; then
             _error "Service '$name' is not configured."
-            return
+            exit 1
         fi
         services="$registry_port registry undefined $hostname"
     else
