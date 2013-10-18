@@ -19,6 +19,9 @@ function testRoute(route, body, done) {
 }
 
 describe("registry", function () {
+    beforeEach(function () {
+        Registry.reset();
+    });
     it("should be a valid object", function () {
         Registry.should.be.an.Object;
     });
@@ -39,11 +42,14 @@ describe("registry", function () {
         testRoute("/", { services: [ { name: "service1" } ] }, done);
     });
     it("should dynamically handle new services", function (done) {
-        Registry.add(new Service({ prop1: "prop1Value" }));
-        testRoute("/", { services: [
-            { name: "service1" },
-            { prop1: "prop1Value" }
-        ]}, done);
+        Registry.add(new Service({ name: "service1" }));
+        testRoute("/", { services: [ { name: "service1" } ] }, function () {
+            Registry.add(new Service({ prop1: "prop1Value" }));
+            testRoute("/", { services: [
+                { name: "service1" },
+                { prop1: "prop1Value" }
+            ]}, done);
+        });
     });
     it("should allow services to be cleared", function (done) {
         Registry.reset.should.be.a.Function;
@@ -52,8 +58,7 @@ describe("registry", function () {
     });
     it("should allow services to be registered over HTTP", function (done) {
         var service = new Service({ name: "newService" });
-        var request = supertest(Registry);
-        request
+        supertest(Registry)
             .post("/service")
             .set('Accept', 'application/json')
             .send(service.properties())
@@ -62,5 +67,20 @@ describe("registry", function () {
                 res.status.should.equal(200);
                 testRoute("/", { services: [ { name: "newService" } ] }, done);
             });
+    });
+    it("should describe a service by name", function (done) {
+        var props = { name: "wendys", fries: "curly" };
+        var service = new Service(props);
+        Registry.add(service);
+        testRoute("/", { services: [ props ] }, function () {
+            testRoute("/service/wendys", props, done);
+        });
+    });
+    it("should get 404 if service not found", function (done) {
+        supertest(Registry).get("/service/toothfairy").end(function (err, res) {
+            [err].should.be.null;
+            res.status.should.equal(404);
+            done();
+        });
     });
 });
