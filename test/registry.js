@@ -5,8 +5,9 @@ var async     = require("async");
 
 var Registry   = require("../src/registry");
 var Service   = require("../src/service");
+Registry.listen(34567);
 
-var URL = "http://0.0.0.0:3456"
+var URL = "http://0.0.0.0:34567"
 
 function testRoute(route, body, done) {
     supertest(Registry).get(route).end(function (err, res) {
