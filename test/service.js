@@ -61,6 +61,19 @@ describe("Service", function () {
             done();
         });
     });
+    it("should allow user properties in constructor", function () {
+        var service = new Service({ name: "namedService" });
+        service.property("name").should.equal("namedService");
+    });
+    it("should allow properties to be defined a la carte", function () {
+        var service = new Service();
+        service.property("prop1", "propValue");
+        service.property("prop1").should.equal("propValue");
+    });
+    it("should return all properties", function () {
+        var service = new Service({ p1: "v1", p2: "v2" });
+        service.properties().should.eql({ p1: "v1", p2: "v2" });
+    })
 });
 
 describe("Service.start()", function () {

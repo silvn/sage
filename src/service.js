@@ -9,7 +9,8 @@ var util    = require('util');
 var restify = require('restify');
 var Q       = require('q');
 
-function Service() {
+function Service(properties) {
+    this.props = (properties || {});
     this.restify = restify.createServer();
 }
 
@@ -89,6 +90,17 @@ Service.prototype.post = function () {
 Service.prototype.put = function () {
     this.restify.put.apply(this.restify, arguments);
     return this;
+};
+
+Service.prototype.property = function (prop, value) {
+    if (value !== undefined) {
+        this.props[prop] = value;
+    }
+    return this.props[prop];
+};
+
+Service.prototype.properties = function () {
+    return this.props;
 };
 
 module.exports = Service;
