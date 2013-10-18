@@ -13,17 +13,13 @@ describe("registry", function () {
     it("should be an instance of Service", function () {
         Registry.should.be.an.instanceOf(Service);
     })
-});
-
-describe("Registry index", function () {
-    var server = Registry.server();
-    it("should return an object", function (done) {
-        supertest(server)
+    it("should return a default index route", function (done) {
+        supertest(Registry)
             .get('/')
             .end(function (err, res) {
                 [err].should.be.null;
                 res.status.should.equal(200);
-                res.body.should.equal({
+                res.body.should.eql({
                     services: []
                 });
                 done();
