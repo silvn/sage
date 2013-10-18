@@ -104,4 +104,8 @@ Service.prototype.properties = function () {
     return this.props;
 };
 
+Service.prototype.url = function () {
+    return this.restify.url;
+};
+
 module.exports = Service;
