@@ -7,13 +7,12 @@ var Service   = require("../src/service");
 
 function testMethod(method, done, expectBody) {
     var service = new Service();
-    var server = service.server();
     expectBody = expectBody || { result: "yay" };
     var send = function (req, res) {
         res.send(expectBody);
     };
     service[method]('/apath', send);
-    supertest(server)[method]('/apath')
+    supertest(service)[method]('/apath')
         .end(function (err, res) {
             [err].should.be.null;
             res.status.should.equal(200);
@@ -22,7 +21,7 @@ function testMethod(method, done, expectBody) {
         });
 }
 
-describe("service", function () {
+describe("Service", function () {
     it("should be a function", function () {
         Service.should.be.a("function");
     });
@@ -50,6 +49,31 @@ describe("service", function () {
     it("should support HEAD methods", function (done) {
         testMethod('head', done, {});
     });
+    it("should allow routes to be overloaded", function (done) {
+        var service = new Service();
+        service.get("/", function (req, res) {
+            res.send("Yay overridden!");
+        });
+        supertest(service).get("/").end(function (err, res) {
+            [err].should.be.null;
+            res.status.should.equal(200);
+            res.body.should.equal("Yay overridden!");
+            done();
+        });
+    });
+    it("should allow user properties in constructor", function () {
+        var service = new Service({ name: "namedService" });
+        service.property("name").should.equal("namedService");
+    });
+    it("should allow properties to be defined a la carte", function () {
+        var service = new Service();
+        service.property("prop1", "propValue");
+        service.property("prop1").should.equal("propValue");
+    });
+    it("should return all properties", function () {
+        var service = new Service({ p1: "v1", p2: "v2" });
+        service.properties().should.eql({ p1: "v1", p2: "v2" });
+    })
 });
 
 describe("Service.start()", function () {
@@ -60,7 +84,7 @@ describe("Service.start()", function () {
     });
     it("should 'listen' to a specified port", function (done) {
         var lService = new Service();
-        lService.server().listen = function (port) {
+        lService.listen = function (port) {
             port.should.equal(7000);
             done();
         };
@@ -87,9 +111,8 @@ describe("Service.stop()", function () {
 
 describe("Index route", function () {
     var service = new Service();
-    var server = service.server();
     it("should handle GET", function (done) {
-        supertest(server)
+        supertest(service)
             .get('/')
             .end(function (err, res) {
                 [err].should.be.null;
@@ -100,11 +123,27 @@ describe("Index route", function () {
         );
     });
     it("should handle HEAD", function (done) {
-        supertest(server)
+        supertest(service)
             .head('/')
             .end(function (err, res) {
                 [err].should.be.null;
                 res.status.should.equal(200);
+                done();
+            }
+        );
+    });
+});
+
+describe("Service.get", function () {
+    var service = new Service();
+    it("should allow a new route with parameters", function (done) {
+        service.get("/resource/:id", function (req, res) {
+            req.params.id.should.equal("9722");
+            res.send("Yes! " + req.params.id);
+        });
+        supertest(service).get("/resource/9722").end(
+            function (err, res) {
+                res.body.should.eql("Yes! 9722");
                 done();
             }
         );

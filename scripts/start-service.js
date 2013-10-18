@@ -1,13 +1,15 @@
 var path     = require('path');
 var optimist = require('optimist');
 var fs       = require('fs');
+var http     = require('http');
 
 var optimist = require('optimist')
     .usage("Start a Sage service\nUsage: $0 [options]")
-    .describe("name",    "The service name")
-    .describe("service", "The service file")
-    .describe("port",    "The network port")
-    .describe("log",     "File to log output");
+    .describe("name",     "The service name")
+    .describe("service",  "The service file")
+    .describe("port",     "The network port")
+    .describe("log",      "File to log output")
+    .describe("registry", "A registry with which to register the service");
 var argv = optimist.argv;
 
 // Private utility functions

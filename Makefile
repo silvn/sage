@@ -5,15 +5,17 @@ JSDOC    = ./external/jsdoc/jsdoc
 NPM      = npm
 GIT      = git
 
-MOCHAOPTS =
-JSDOCCONF = ./conf/jsdoc.json
-JSDOCDEST = ./dist/doc/api
-TESTDIR ?= test
+MOCHAOPTS ?=
+JSDOCCONF  = ./conf/jsdoc.json
+JSDOCDEST  = ./dist/doc/api
+TESTDIR   ?= test
 
 all: test
 
-init-npm:
+node_modules:
 	@ $(NPM) install
+
+init-npm: node_modules
 
 init-submodules:
 	@ $(GIT) submodule update --init
