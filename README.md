@@ -1,5 +1,5 @@
 # Sage
-**Version 0.0.4**
+**Version 0.0.5**
 
 A REST service architecture for scientific data.
 
@@ -69,7 +69,7 @@ TODO
 
 ##Changelog
 
-####v0.0.4
+####v0.0.5
 
 * [CHANGE] Using resource URIs for services
 
