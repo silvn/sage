@@ -193,8 +193,9 @@ function register_services {
             if [ "$name" == "registry" ]; then
                 continue;
             fi
+            url="http://$host:$port"
             define payload <<EOJSON
-{ "name" : "$name", "port": "$port", "host": "$host" }
+{ "name" : "$name", "port": "$port", "host": "$host", "url": "$url" }
 EOJSON
             local response=$(curl -is -H "Content-type: application/json" \
                 -X POST -d "$payload" "$reg_url/service")

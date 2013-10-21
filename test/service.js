@@ -4,6 +4,7 @@ var util      = require("util");
 var async     = require("async");
 
 var Service   = require("../src/service");
+var Resource  = require("../src/resource");
 
 function testMethod(method, done, expectBody) {
     var service = new Service();
@@ -73,7 +74,13 @@ describe("Service", function () {
     it("should return all properties", function () {
         var service = new Service({ p1: "v1", p2: "v2" });
         service.properties().should.eql({ p1: "v1", p2: "v2" });
-    })
+    });
+    it("should expose REST error classes", function () {
+        Service.ResourceNotFoundError.should.be.a.Function;
+        Service.RestError.should.be.a.Function;
+        Service.BadDigestError.should.be.a.Function;
+        Service.InternalError.should.be.a.Function;
+    });
 });
 
 describe("Service.start()", function () {
@@ -96,6 +103,15 @@ describe("Service.start()", function () {
         (function () { service.start({ port: 7000 }); }).should.throw();
         service.stop();
     });
+    it("should have a listening boolean function", function () {
+        var lService = new Service();
+        lService.listening.should.be.a.Function;
+        lService.listening().should.be.false;
+        lService.start({ port: 7003 });
+        lService.listening().should.be.true;
+        lService.stop();
+        lService.listening().should.be.false;
+    });
 });
 
 describe("Service.stop()", function () {
@@ -109,29 +125,118 @@ describe("Service.stop()", function () {
     });
 });
 
-describe("Index route", function () {
+describe("Basic HTTP API", function () {
     var service = new Service();
+    var request = supertest(service);
     it("should handle GET", function (done) {
-        supertest(service)
-            .get('/')
-            .end(function (err, res) {
-                [err].should.be.null;
-                res.status.should.equal(200);
-                res.body.should.be.null; // FIXME: Should return something
-                done();
-            }
-        );
+        request.get('/').end(function (err, res) {
+            [err].should.be.null;
+            res.status.should.equal(200);
+            res.body.should.be.null; // FIXME: Should return something
+            done();
+        });
     });
     it("should handle HEAD", function (done) {
-        supertest(service)
-            .head('/')
-            .end(function (err, res) {
+        request.head('/').end(function (err, res) {
+            [err].should.be.null;
+            res.status.should.equal(200);
+            done();
+        });
+    });
+});
+
+describe("Resource API", function () {
+    var service = new Service();
+    var request = supertest(service);
+    service.listen(9876);
+    var URL = "http://0.0.0.0:9876";
+    var baseballSchema = {
+        diameter: { type: "number" }
+    };
+    it("should describe resources", function (done) {
+        service.resource("protein", new Resource());
+        service.resource("baseball", new Resource(baseballSchema));
+        request.get("/").end(function (err, res) {
+            [err].should.be.null;
+            res.status.should.equal(200);
+            res.body.should.eql({
+                resources: {
+                    "http://0.0.0.0:9876/protein": {},
+                    "http://0.0.0.0:9876/baseball": baseballSchema
+                }
+            });
+            done();
+        });
+    });
+    it("should describe a single resource", function (done) {
+        var expectedRoutes = {};
+        expectedRoutes[URL + "/protein/list"] = "List all protein resources";
+        request.get("/protein").end(function (err, res) {
+            [err].should.be.null;
+            res.status.should.equal(200);
+            res.body.should.eql({
+                routes: expectedRoutes,
+                schema: {}
+            });
+            done();
+        });
+    });
+    it("should include schema in resource description", function (done) {
+        var expectedRoutes = {};
+        expectedRoutes[URL + "/baseball/list"] = "List all baseball resources";
+        request.get("/baseball").end(function (err, res) {
+            [err].should.be.null;
+            res.status.should.equal(200);
+            res.body.should.eql({
+                routes: expectedRoutes,
+                schema: baseballSchema
+            });
+            done();
+        });
+    });
+    it("should return 404 when no resource is found", function (done) {
+        request.get("/notaresource").end(function (err, res) {
+            [err].should.be.null;
+            res.status.should.equal(404);
+            res.body.should.eql({
+                code: "ResourceNotFound",
+                message: "Resource notaresource not found"
+            });
+            done();
+        });
+    });
+    it("should return 404 on POST to nonexistent resource", function (done) {
+        request.post("/notaresource").send({}).end(function (err, res) {
+            res.status.should.equal(404);
+            res.body.should.eql({
+                code: "ResourceNotFound",
+                message: "Cannot create an undefined resource"
+            });
+            done();
+        });
+    })
+    it("should create resource via POST", function (done) {
+        var baseball = { diameter: 2.9 /* inches */};
+        request.post("/baseball").send(baseball).end(function (err, res) {
+            [err].should.be.null;
+            res.status.should.equal(200);
+            res.body.id.should.equal(1);
+            done();
+        });
+    });
+    it("should show new resource in list", function (done) {
+        request.post("/baseball").send({ diameter: 5.8 }).end(function () {
+            request.get("/baseball/list").end(function (err, res) {
                 [err].should.be.null;
                 res.status.should.equal(200);
+                res.body.should.eql([
+                    URL + "/baseball/1",
+                    URL + "/baseball/2"
+                ]);
                 done();
-            }
-        );
-    });
+            });
+        });
+    })
 });
 
 describe("Service.get", function () {
