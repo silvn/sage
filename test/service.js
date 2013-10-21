@@ -75,6 +75,12 @@ describe("Service", function () {
         var service = new Service({ p1: "v1", p2: "v2" });
         service.properties().should.eql({ p1: "v1", p2: "v2" });
     });
+    it("should expose REST error classes", function () {
+        Service.ResourceNotFoundError.should.be.a.Function;
+        Service.RestError.should.be.a.Function;
+        Service.BadDigestError.should.be.a.Function;
+        Service.InternalError.should.be.a.Function;
+    });
 });
 
 describe("Service.start()", function () {
@@ -184,8 +190,9 @@ describe("Resource API", function () {
             [err].should.be.null;
             res.status.should.equal(404);
             res.body.should.eql({
-                message: "Resource not found"
-            })
+                code: "ResourceNotFound",
+                message: "Resource notaresource not found"
+            });
             done();
         });
     });

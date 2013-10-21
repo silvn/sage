@@ -48,9 +48,8 @@ function ensureDefaultRoutes(service) {
         var content = { routes: {} };
         var resource = service.resources[key];
         if (resource === undefined) {
-            return res.send(404, {
-                message: "Resource not found"
-            });
+            return next(new restify.ResourceNotFoundError(
+                "Resource " + key + " not found"));
         }
         content.schema = _.clone(resource.schema());
         content.routes[[service.url(), key, "list"].join("/")] =
@@ -59,7 +58,7 @@ function ensureDefaultRoutes(service) {
         next();
     });
     service.post("/:resource", function (req, res, next) {
-        
+        res.send();
     });
     service.get("/:resource/list", function (req, res, next) {
         next();
@@ -131,5 +130,13 @@ DELEGATE_METHODS.forEach(function (method) {
         return this.restify[method].apply(this.restify, arguments);
     };
 });
+
+// Gra Restify's error classes
+for (var fn in restify) {
+    if (restify.hasOwnProperty(fn) &&
+        typeof restify[fn] === "function" &&
+        fn.match(/Error$/) !== null)
+        Service[fn] = restify[fn];
+}
 
 module.exports = Service;
