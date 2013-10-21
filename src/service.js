@@ -46,11 +46,20 @@ function ensureDefaultRoutes(service) {
     service.get("/:resource", function (req, res, next) {
         var key = req.params.resource;
         var content = { routes: {} };
-        content.schema = _.clone(service.resources[key].schema());
+        var resource = service.resources[key];
+        if (resource === undefined) {
+            return res.send(404, {
+                message: "Resource not found"
+            });
+        }
+        content.schema = _.clone(resource.schema());
         content.routes[[service.url(), key, "list"].join("/")] =
             "List all " + key + " resources";
         res.send(content);
         next();
+    });
+    service.post("/:resource", function (req, res, next) {
+        
     });
     service.get("/:resource/list", function (req, res, next) {
         next();

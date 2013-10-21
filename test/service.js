@@ -136,7 +136,7 @@ describe("Resource API", function () {
     service.listen(9876);
     var URL = "http://0.0.0.0:9876";
     var baseballSchema = {
-        radius: { type: "string" }
+        diameter: { type: "number" }
     };
     it("should describe resources", function (done) {
         service.resource("protein", new Resource());
@@ -176,6 +176,24 @@ describe("Resource API", function () {
                 routes: expectedRoutes,
                 schema: baseballSchema
             });
+            done();
+        });
+    });
+    it("should return 404 when no resource is found", function (done) {
+        request.get("/notaresource").end(function (err, res) {
+            [err].should.be.null;
+            res.status.should.equal(404);
+            res.body.should.eql({
+                message: "Resource not found"
+            })
+            done();
+        });
+    });
+    it("should create resource via POST", function (done) {
+        var baseball = { diameter: 2.9 /* inches */};
+        request.post("/baseball").send(baseball).end(function (err, res) {
+            [err].should.be.null;
+            res.status.should.equal(200);
             done();
         });
     });
