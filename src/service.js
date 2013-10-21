@@ -16,6 +16,7 @@ function Service(properties) {
     this.restify.use(restify.bodyParser());
     this.resources = {};
     this.entities = {};
+    this.isListening = false;
 }
 
 Service.extend = function (args) {
@@ -107,13 +108,14 @@ Service.prototype.stop = function () {
     }
     this.startedPromise.done(function () {
         self.restify.close();
-        this.started = undefined;
     });
+    self.isListening = false;
     return this;
 };
 
 Service.prototype.listen = function () {
     ensureDefaultRoutes(this);
+    this.isListening = true;
     return this.restify.listen.apply(this.restify, arguments);
 }
 
@@ -139,6 +141,10 @@ Service.prototype.resource = function (key, value) {
         setResourceRoutes(this, key);
     }
     return this.resources[key];
+}
+
+Service.prototype.listening = function () {
+    return this.isListening;
 }
 
 DELEGATE_METHODS.forEach(function (method) {

@@ -103,6 +103,15 @@ describe("Service.start()", function () {
         (function () { service.start({ port: 7000 }); }).should.throw();
         service.stop();
     });
+    it("should have a listening boolean function", function () {
+        var lService = new Service();
+        lService.listening.should.be.a.Function;
+        lService.listening().should.be.false;
+        lService.start({ port: 7003 });
+        lService.listening().should.be.true;
+        lService.stop();
+        lService.listening().should.be.false;
+    });
 });
 
 describe("Service.stop()", function () {
