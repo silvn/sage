@@ -5,9 +5,10 @@
  * Includes the Service API
  */
 
-var util    = require('util');
-var restify = require('restify');
-var Q       = require('q');
+var util    = require("util");
+var restify = require("restify");
+var Q       = require("q");
+var _       = require("underscore");
 
 function Service(properties) {
     this.props = (properties || {});
@@ -41,6 +42,20 @@ function ensureDefaultRoutes(service) {
     service.head('/', function (req, res, next) {
         res.send();
         return next();
+    });
+}
+
+function setResourceRoutes(service, key) {
+    var base = service.url() + "/" + key;
+    service.get("/" + key, function (req, res, next) {
+        var content = { routes: {} };
+        content.schema = _.clone(service.resources[key].schema());
+        content.routes[base + "/list"] = "List all " + key + " resources";
+        res.send(content);
+        next();
+    });
+    service.get("/" + key + "/list", function (req, res, next) {
+        next();
     });
 }
 
@@ -95,6 +110,7 @@ Service.prototype.url = function () {
 Service.prototype.resource = function (key, value) {
     if (value !== undefined) {
         this.resources[key] = value;
+        setResourceRoutes(this, key);
     }
     return this.resources[key];
 }

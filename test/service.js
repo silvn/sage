@@ -132,15 +132,16 @@ describe("Basic HTTP API", function () {
 
 describe("Resource API", function () {
     var service = new Service();
+    var request = supertest(service);
     service.listen(9876);
     var URL = "http://0.0.0.0:9876";
+    var baseballSchema = {
+        radius: { type: "string" }
+    };
     it("should describe resources", function (done) {
-        var baseballSchema = {
-            radius: { type: "string" }
-        };
         service.resource("protein", new Resource());
         service.resource("baseball", new Resource(baseballSchema));
-        supertest(service).get("/").end(function (err, res) {
+        request.get("/").end(function (err, res) {
             [err].should.be.null;
             res.status.should.equal(200);
             res.body.should.eql({
@@ -148,6 +149,32 @@ describe("Resource API", function () {
                     "http://0.0.0.0:9876/protein": {},
                     "http://0.0.0.0:9876/baseball": baseballSchema
                 }
+            });
+            done();
+        });
+    });
+    it("should describe a single resource", function (done) {
+        var expectedRoutes = {};
+        expectedRoutes[URL + "/protein/list"] = "List all protein resources";
+        request.get("/protein").end(function (err, res) {
+            [err].should.be.null;
+            res.status.should.equal(200);
+            res.body.should.eql({
+                routes: expectedRoutes,
+                schema: {}
+            });
+            done();
+        });
+    });
+    it("should include schema in resource description", function (done) {
+        var expectedRoutes = {};
+        expectedRoutes[URL + "/baseball/list"] = "List all baseball resources";
+        request.get("/baseball").end(function (err, res) {
+            [err].should.be.null;
+            res.status.should.equal(200);
+            res.body.should.eql({
+                routes: expectedRoutes,
+                schema: baseballSchema
             });
             done();
         });
