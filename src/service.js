@@ -15,6 +15,7 @@ function Service(properties) {
     this.restify = restify.createServer();
     this.restify.use(restify.bodyParser());
     this.resources = {};
+    this.entities = {};
 }
 
 Service.extend = function (args) {
@@ -48,7 +49,7 @@ function ensureDefaultRoutes(service) {
         var content = { routes: {} };
         var resource = service.resources[key];
         if (resource === undefined) {
-            return next(new restify.ResourceNotFoundError(
+            return next(new Service.ResourceNotFoundError(
                 "Resource " + key + " not found"));
         }
         content.schema = _.clone(resource.schema());
@@ -58,10 +59,24 @@ function ensureDefaultRoutes(service) {
         next();
     });
     service.post("/:resource", function (req, res, next) {
-        res.send();
+        var key = req.params.resource;
+        var list = service.entities[key];
+        if (list === undefined) {
+            return next(new Service.ResourceNotFoundError(
+                "Cannot create an undefined resource"
+            ));
+        }
+        var id = list.identifier++;
+        list.items[id] = req.body;
+        res.send({ id: id });
     });
     service.get("/:resource/list", function (req, res, next) {
-        next();
+        var url = service.url();
+        var key = req.params.resource;
+        var entities = service.entities[key];
+        res.send(Object.keys(entities.items).map(function (id) {
+            return [url, key, id].join("/");
+        }));
     });
 }
 
@@ -120,6 +135,7 @@ Service.prototype.url = function () {
 Service.prototype.resource = function (key, value) {
     if (value !== undefined) {
         this.resources[key] = value;
+        this.entities[key] = { identifier: 1, items: {} };
         setResourceRoutes(this, key);
     }
     return this.resources[key];

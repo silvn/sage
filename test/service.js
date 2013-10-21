@@ -196,14 +196,38 @@ describe("Resource API", function () {
             done();
         });
     });
+    it("should return 404 on POST to nonexistent resource", function (done) {
+        request.post("/notaresource").send({}).end(function (err, res) {
+            res.status.should.equal(404);
+            res.body.should.eql({
+                code: "ResourceNotFound",
+                message: "Cannot create an undefined resource"
+            });
+            done();
+        });
+    })
     it("should create resource via POST", function (done) {
         var baseball = { diameter: 2.9 /* inches */};
         request.post("/baseball").send(baseball).end(function (err, res) {
             [err].should.be.null;
             res.status.should.equal(200);
+            res.body.id.should.equal(1);
             done();
         });
     });
+    it("should show new resource in list", function (done) {
+        request.post("/baseball").send({ diameter: 5.8 }).end(function () {
+            request.get("/baseball/list").end(function (err, res) {
+                [err].should.be.null;
+                res.status.should.equal(200);
+                res.body.should.eql([
+                    URL + "/baseball/1",
+                    URL + "/baseball/2"
+                ]);
+                done();
+            });
+        });
+    })
 });
 
 describe("Service.get", function () {
