@@ -27,8 +27,12 @@ Registry.get("/service/:id", function (req, res, next) {
 });
 
 Registry.post("/service", function (req, res, next) {
-    var body = req.body;
-    var id = Registry.add(body);
+    var id, body = req.body;
+    try {
+        id = Registry.add(body);
+    } catch (err) {
+        return next(new Service.InvalidContentError(err.message));
+    }
     res.send(200, {
         message: "Service was added successfully",
         id: id
@@ -38,9 +42,16 @@ Registry.post("/service", function (req, res, next) {
 Registry.add = function (service) {
     var id, props;
     if (service instanceof Service) {
+        if (service.listening() === false) {
+            throw new Error("Service is not listening");
+        }
         id = service.property("id");
         props = service.properties();
+        props.url = service.url();
     } else {
+        if (service.url === undefined) {
+            throw new Error("URL property is not defined");
+        }
         id = service.id;
         props = service;
     }
