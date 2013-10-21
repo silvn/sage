@@ -75,6 +75,12 @@ describe("Service", function () {
         var service = new Service({ p1: "v1", p2: "v2" });
         service.properties().should.eql({ p1: "v1", p2: "v2" });
     });
+    it("should expose REST error classes", function () {
+        Service.ResourceNotFoundError.should.be.a.Function;
+        Service.RestError.should.be.a.Function;
+        Service.BadDigestError.should.be.a.Function;
+        Service.InternalError.should.be.a.Function;
+    });
 });
 
 describe("Service.start()", function () {
@@ -132,15 +138,16 @@ describe("Basic HTTP API", function () {
 
 describe("Resource API", function () {
     var service = new Service();
+    var request = supertest(service);
     service.listen(9876);
     var URL = "http://0.0.0.0:9876";
+    var baseballSchema = {
+        diameter: { type: "number" }
+    };
     it("should describe resources", function (done) {
-        var baseballSchema = {
-            radius: { type: "string" }
-        };
         service.resource("protein", new Resource());
         service.resource("baseball", new Resource(baseballSchema));
-        supertest(service).get("/").end(function (err, res) {
+        request.get("/").end(function (err, res) {
             [err].should.be.null;
             res.status.should.equal(200);
             res.body.should.eql({
@@ -152,6 +159,75 @@ describe("Resource API", function () {
             done();
         });
     });
+    it("should describe a single resource", function (done) {
+        var expectedRoutes = {};
+        expectedRoutes[URL + "/protein/list"] = "List all protein resources";
+        request.get("/protein").end(function (err, res) {
+            [err].should.be.null;
+            res.status.should.equal(200);
+            res.body.should.eql({
+                routes: expectedRoutes,
+                schema: {}
+            });
+            done();
+        });
+    });
+    it("should include schema in resource description", function (done) {
+        var expectedRoutes = {};
+        expectedRoutes[URL + "/baseball/list"] = "List all baseball resources";
+        request.get("/baseball").end(function (err, res) {
+            [err].should.be.null;
+            res.status.should.equal(200);
+            res.body.should.eql({
+                routes: expectedRoutes,
+                schema: baseballSchema
+            });
+            done();
+        });
+    });
+    it("should return 404 when no resource is found", function (done) {
+        request.get("/notaresource").end(function (err, res) {
+            [err].should.be.null;
+            res.status.should.equal(404);
+            res.body.should.eql({
+                code: "ResourceNotFound",
+                message: "Resource notaresource not found"
+            });
+            done();
+        });
+    });
+    it("should return 404 on POST to nonexistent resource", function (done) {
+        request.post("/notaresource").send({}).end(function (err, res) {
+            res.status.should.equal(404);
+            res.body.should.eql({
+                code: "ResourceNotFound",
+                message: "Cannot create an undefined resource"
+            });
+            done();
+        });
+    })
+    it("should create resource via POST", function (done) {
+        var baseball = { diameter: 2.9 /* inches */};
+        request.post("/baseball").send(baseball).end(function (err, res) {
+            [err].should.be.null;
+            res.status.should.equal(200);
+            res.body.id.should.equal(1);
+            done();
+        });
+    });
+    it("should show new resource in list", function (done) {
+        request.post("/baseball").send({ diameter: 5.8 }).end(function () {
+            request.get("/baseball/list").end(function (err, res) {
+                [err].should.be.null;
+                res.status.should.equal(200);
+                res.body.should.eql([
+                    URL + "/baseball/1",
+                    URL + "/baseball/2"
+                ]);
+                done();
+            });
+        });
+    })
 });
 
 describe("Service.get", function () {

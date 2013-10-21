@@ -21,9 +21,8 @@ Registry.get("/service/:id", function (req, res, next) {
     if (service !== undefined) {
         res.send(service);
     } else {
-        res.send(404, {
-            message: "Service " + id + " is not registered"
-        });
+        next(new Service.ResourceNotFoundError(
+            "Service " + id + " is not registered"));
     }
 });
 

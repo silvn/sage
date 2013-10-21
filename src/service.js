@@ -5,15 +5,17 @@
  * Includes the Service API
  */
 
-var util    = require('util');
-var restify = require('restify');
-var Q       = require('q');
+var util    = require("util");
+var restify = require("restify");
+var Q       = require("q");
+var _       = require("underscore");
 
 function Service(properties) {
     this.props = (properties || {});
     this.restify = restify.createServer();
     this.restify.use(restify.bodyParser());
     this.resources = {};
+    this.entities = {};
 }
 
 Service.extend = function (args) {
@@ -42,6 +44,44 @@ function ensureDefaultRoutes(service) {
         res.send();
         return next();
     });
+    service.get("/:resource", function (req, res, next) {
+        var key = req.params.resource;
+        var content = { routes: {} };
+        var resource = service.resources[key];
+        if (resource === undefined) {
+            return next(new Service.ResourceNotFoundError(
+                "Resource " + key + " not found"));
+        }
+        content.schema = _.clone(resource.schema());
+        content.routes[[service.url(), key, "list"].join("/")] =
+            "List all " + key + " resources";
+        res.send(content);
+        next();
+    });
+    service.post("/:resource", function (req, res, next) {
+        var key = req.params.resource;
+        var list = service.entities[key];
+        if (list === undefined) {
+            return next(new Service.ResourceNotFoundError(
+                "Cannot create an undefined resource"
+            ));
+        }
+        var id = list.identifier++;
+        list.items[id] = req.body;
+        res.send({ id: id });
+    });
+    service.get("/:resource/list", function (req, res, next) {
+        var url = service.url();
+        var key = req.params.resource;
+        var entities = service.entities[key];
+        res.send(Object.keys(entities.items).map(function (id) {
+            return [url, key, id].join("/");
+        }));
+    });
+}
+
+function setResourceRoutes(service, key) {
+    var base = service.url() + "/" + key;
 }
 
 Service.prototype.start = function (params) {
@@ -95,6 +135,8 @@ Service.prototype.url = function () {
 Service.prototype.resource = function (key, value) {
     if (value !== undefined) {
         this.resources[key] = value;
+        this.entities[key] = { identifier: 1, items: {} };
+        setResourceRoutes(this, key);
     }
     return this.resources[key];
 }
@@ -104,5 +146,13 @@ DELEGATE_METHODS.forEach(function (method) {
         return this.restify[method].apply(this.restify, arguments);
     };
 });
+
+// Gra Restify's error classes
+for (var fn in restify) {
+    if (restify.hasOwnProperty(fn) &&
+        typeof restify[fn] === "function" &&
+        fn.match(/Error$/) !== null)
+        Service[fn] = restify[fn];
+}
 
 module.exports = Service;
