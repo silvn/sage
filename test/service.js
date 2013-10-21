@@ -135,15 +135,18 @@ describe("Resource API", function () {
     service.listen(9876);
     var URL = "http://0.0.0.0:9876";
     it("should describe resources", function (done) {
+        var baseballSchema = {
+            radius: { type: "string" }
+        };
         service.resource("protein", new Resource());
-        service.resource("baseball", new Resource());
+        service.resource("baseball", new Resource(baseballSchema));
         supertest(service).get("/").end(function (err, res) {
             [err].should.be.null;
             res.status.should.equal(200);
             res.body.should.eql({
                 resources: {
                     "http://0.0.0.0:9876/protein": {},
-                    "http://0.0.0.0:9876/baseball": {}
+                    "http://0.0.0.0:9876/baseball": baseballSchema
                 }
             });
             done();

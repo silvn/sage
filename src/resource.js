@@ -25,4 +25,7 @@ module.exports = function Resource(properties) {
             }
         }
     }
+    this.schema = function () {
+        return properties;
+    }
 };

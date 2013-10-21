@@ -32,7 +32,8 @@ function ensureDefaultRoutes(service) {
     service.get('/',  function (req, res, next) {
         var resources = {};
         for (var key in service.resources) {
-            resources[service.url() + "/" + key] = service.resources[key];
+            resources[service.url() + "/" + key] =
+                service.resources[key].schema();
         }
         res.send({ resources: resources });
         return next();
