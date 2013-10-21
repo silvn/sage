@@ -13,6 +13,7 @@ function Service(properties) {
     this.props = (properties || {});
     this.restify = restify.createServer();
     this.restify.use(restify.bodyParser());
+    this.resources = {};
 }
 
 Service.extend = function (args) {
@@ -25,9 +26,15 @@ Service.extend = function (args) {
     return Extended;
 };
 
+var DELEGATE_METHODS = ["address", "get", "post", "put", "head"];
+
 function ensureDefaultRoutes(service) {
     service.get('/',  function (req, res, next) {
-        res.send();
+        var resources = {};
+        for (var key in service.resources) {
+            resources[service.url() + "/" + key] = service.resources[key];
+        }
+        res.send({ resources: resources });
         return next();
     });
     service.head('/', function (req, res, next) {
@@ -64,34 +71,10 @@ Service.prototype.stop = function () {
     return this;
 };
 
-Service.prototype.address = function () {
-    return this.restify.address.apply(this.restify, arguments);
-};
-
 Service.prototype.listen = function () {
     ensureDefaultRoutes(this);
     return this.restify.listen.apply(this.restify, arguments);
 }
-
-Service.prototype.get = function () {
-    this.restify.get.apply(this.restify, arguments);
-    return this;
-};
-
-Service.prototype.head = function () {
-    this.restify.head.apply(this.restify, arguments);
-    return this;
-};
-
-Service.prototype.post = function () {
-    this.restify.post.apply(this.restify, arguments);
-    return this;
-};
-
-Service.prototype.put = function () {
-    this.restify.put.apply(this.restify, arguments);
-    return this;
-};
 
 Service.prototype.property = function (prop, value) {
     if (value !== undefined) {
@@ -107,5 +90,18 @@ Service.prototype.properties = function () {
 Service.prototype.url = function () {
     return this.restify.url;
 };
+
+Service.prototype.resource = function (key, value) {
+    if (value !== undefined) {
+        this.resources[key] = value;
+    }
+    return this.resources[key];
+}
+
+DELEGATE_METHODS.forEach(function (method) {
+    Service.prototype[method] = function () {
+        return this.restify[method].apply(this.restify, arguments);
+    };
+});
 
 module.exports = Service;

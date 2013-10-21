@@ -4,6 +4,7 @@ var util      = require("util");
 var async     = require("async");
 
 var Service   = require("../src/service");
+var Resource  = require("../src/resource");
 
 function testMethod(method, done, expectBody) {
     var service = new Service();
@@ -73,7 +74,7 @@ describe("Service", function () {
     it("should return all properties", function () {
         var service = new Service({ p1: "v1", p2: "v2" });
         service.properties().should.eql({ p1: "v1", p2: "v2" });
-    })
+    });
 });
 
 describe("Service.start()", function () {
@@ -109,28 +110,44 @@ describe("Service.stop()", function () {
     });
 });
 
-describe("Index route", function () {
+describe("Basic HTTP API", function () {
     var service = new Service();
+    var request = supertest(service);
     it("should handle GET", function (done) {
-        supertest(service)
-            .get('/')
-            .end(function (err, res) {
-                [err].should.be.null;
-                res.status.should.equal(200);
-                res.body.should.be.null; // FIXME: Should return something
-                done();
-            }
-        );
+        request.get('/').end(function (err, res) {
+            [err].should.be.null;
+            res.status.should.equal(200);
+            res.body.should.be.null; // FIXME: Should return something
+            done();
+        });
     });
     it("should handle HEAD", function (done) {
-        supertest(service)
-            .head('/')
-            .end(function (err, res) {
-                [err].should.be.null;
-                res.status.should.equal(200);
-                done();
-            }
-        );
+        request.head('/').end(function (err, res) {
+            [err].should.be.null;
+            res.status.should.equal(200);
+            done();
+        });
+    });
+});
+
+describe("Resource API", function () {
+    var service = new Service();
+    service.listen(9876);
+    var URL = "http://0.0.0.0:9876";
+    it("should describe resources", function (done) {
+        service.resource("protein", new Resource());
+        service.resource("baseball", new Resource());
+        supertest(service).get("/").end(function (err, res) {
+            [err].should.be.null;
+            res.status.should.equal(200);
+            res.body.should.eql({
+                resources: {
+                    "http://0.0.0.0:9876/protein": {},
+                    "http://0.0.0.0:9876/baseball": {}
+                }
+            });
+            done();
+        });
     });
 });
 
