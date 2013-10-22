@@ -1,5 +1,5 @@
 # Sage
-**Version 0.0.6**
+**Version 0.0.7**
 
 A REST service architecture for scientific data.
 
@@ -69,9 +69,14 @@ TODO
 
 ##Changelog
 
+####v0.0.7
+
+* [NEW] Container Sage class wraps other classes (Sage.Service, Sage.Resource, and Sage.Registry)
+* [NEW] Standardization of NPM configuration for use as external library
+
 ####v0.0.6
 
-* [NEW] Resources. Each service can have a number of resources that are validated and provide default descriptions. 
+* [NEW] Resources. Each service can have a number of resources that are validated and provide default descriptions.
 
 ####v0.0.5
 
