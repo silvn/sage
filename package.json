@@ -29,5 +29,6 @@
     },
     "scripts": {
         "start": "sage start"
-    } 
+    },
+    "bin": "./scripts/sage"
 }
