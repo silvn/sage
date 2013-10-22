@@ -28,7 +28,8 @@
       , "supertest"        : ">=0.5.1"
     },
     "scripts": {
-        "start": "sage start"
+        "start"            : "sage start"
     },
-    "bin": "./scripts/sage"
+    "bin"                  : "./scripts/sage",
+    "main"                 : "./src/sage.js"
 }
