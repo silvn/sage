@@ -1,15 +1,18 @@
-/**
- * @ module service
- *
- * The base service, providing all service functionality
- * Includes the Service API
- */
-
 var util    = require("util");
 var restify = require("restify");
 var Q       = require("q");
 var _       = require("underscore");
 
+/**
+ * @class Service
+ *
+ * The base service, providing all service functionality
+ * Includes the Service API
+ * 
+ * @constructor
+ * @param {Object} properties A set of properties. These properties will be
+ *                 used to describe the service within the {@link Registry}.
+ */
 function Service(properties) {
     this.props = (properties || {});
     this.restify = restify.createServer();
@@ -19,6 +22,15 @@ function Service(properties) {
     this.isListening = false;
 }
 
+/**
+ * @method
+ * Extends the service.
+ * 
+ * @param {Object} args Arguments with which to extend
+ * @return {Service} An extended service
+ * 
+ * @static
+ */
 Service.extend = function (args) {
     var Extended = function () {
         for (var prop in args) {
@@ -29,8 +41,65 @@ Service.extend = function (args) {
     return Extended;
 };
 
-var DELEGATE_METHODS = ["address", "get", "post", "put", "head"];
+var DELEGATE_METHODS = [
+    /**
+     * @method address
+     * Gets URL address info about the service
+     */
+    "address",
 
+    /**
+     * @method get
+     * Defines HTTP GET
+     * @param {String} path
+     * @param {Function} callback
+     * @param {ClientRequest} callback.request The server request
+     * @param {ServerResponse} callback.response The server response
+     * @param {Function} callback.next The next callback
+     */
+    "get",
+
+    /**
+     * @method post
+     * Defines HTTP POST
+     * @param {String} path
+     * @param {Function} callback
+     * @param {ClientRequest} callback.request The server request
+     * @param {ServerResponse} callback.response The server response
+     * @param {Function} callback.next The next callback
+     */
+    "post",
+
+    /**
+     * @method put
+     * Defines HTTP PUT
+     * @param {String} path
+     * @param {Function} callback
+     * @param {ClientRequest} callback.request The server request
+     * @param {ServerResponse} callback.response The server response
+     * @param {Function} callback.next The next callback
+     */
+    "put",
+
+    /**
+     * @method head
+     * Defines HTTP HEAD
+     * @param {String} path
+     * @param {Function} callback
+     * @param {ClientRequest} callback.request The server request
+     * @param {ServerResponse} callback.response The server response
+     * @param {Function} callback.next The next callback
+     */
+    "head"
+];
+
+/**
+ * @method
+ * Implements HTTP routes if they aren't already defined.
+ * 
+ * @private
+ * @static
+ */
 function ensureDefaultRoutes(service) {
     service.get('/',  function (req, res, next) {
         var resources = {};
@@ -85,6 +154,14 @@ function setResourceRoutes(service, key) {
     var base = service.url() + "/" + key;
 }
 
+/**
+ * @method
+ * Starts the service.
+ * 
+ * @param {Object} params Start parameters
+ * @param {Number} params.port The port on which to start the service
+ * @chainable
+ */
 Service.prototype.start = function (params) {
     params = params || {};
     if (params.port === undefined) {
@@ -101,6 +178,12 @@ Service.prototype.start = function (params) {
     return this;
 };
 
+/**
+ * @method
+ * Stops the service.
+ * 
+ * @chainable
+ */
 Service.prototype.stop = function () {
     var self = this;
     if (this.startedPromise === null) {
@@ -113,12 +196,27 @@ Service.prototype.stop = function () {
     return this;
 };
 
+/**
+ * @method
+ * Listens to a given port. Same effect as {@link #start}, used for
+ * compatibility with Connect.
+ * 
+ * @chainable
+ */
 Service.prototype.listen = function () {
     ensureDefaultRoutes(this);
     this.isListening = true;
     return this.restify.listen.apply(this.restify, arguments);
 }
 
+/**
+ * @method property
+ * Gets or sets a property
+ * 
+ * @param {String} name    The name of the property
+ * @param value (optional) The value of the property
+ * @return {Mixed} The value of the property
+ */
 Service.prototype.property = function (prop, value) {
     if (value !== undefined) {
         this.props[prop] = value;
@@ -126,14 +224,31 @@ Service.prototype.property = function (prop, value) {
     return this.props[prop];
 };
 
+/**
+ * @method
+ * Gets the set of service properties.
+ * 
+ * @return The set of properties
+ */
 Service.prototype.properties = function () {
     return this.props;
 };
 
+/**
+ * @method
+ * Gets the URL for the running service.
+ */
 Service.prototype.url = function () {
     return this.restify.url;
 };
 
+/**
+ * @method
+ * Gets or sets a resource for this service.
+ * 
+ * @param {String} name The name of the resource
+ * @param {Resource} resource (optional) The resource to set
+ */
 Service.prototype.resource = function (key, value) {
     if (value !== undefined) {
         this.resources[key] = value;
@@ -141,11 +256,17 @@ Service.prototype.resource = function (key, value) {
         setResourceRoutes(this, key);
     }
     return this.resources[key];
-}
+};
 
+/**
+ * @method listening
+ * Whether the service is currently running.
+ * 
+ * @return {Boolean} Is the service running?
+ */
 Service.prototype.listening = function () {
     return this.isListening;
-}
+};
 
 DELEGATE_METHODS.forEach(function (method) {
     Service.prototype[method] = function () {
@@ -153,7 +274,7 @@ DELEGATE_METHODS.forEach(function (method) {
     };
 });
 
-// Gra Restify's error classes
+// Grab Restify's error classes
 for (var fn in restify) {
     if (restify.hasOwnProperty(fn) &&
         typeof restify[fn] === "function" &&
@@ -162,3 +283,16 @@ for (var fn in restify) {
 }
 
 module.exports = Service;
+
+/**
+ * @class ClientRequest
+ * External class, defined by the [Node.js HTTP module][1]
+ * 
+ * [1]: http://nodejs.org/api/http.html#http_class_http_clientrequest
+ */
+/**
+ * @class ServerResponse
+ * Defined by the [Node.js HTTP module][1]
+ * 
+ * [1]: http://nodejs.org/api/http.html#http_class_http_serverresponse
+ */
