@@ -1,14 +1,15 @@
 PACKAGE  = sage
 NODEBIN  = ./node_modules/.bin
 MOCHA    = $(NODEBIN)/mocha
-JSDOC    = ./external/jsdoc/jsdoc
 NPM      = npm
 GIT      = git
+JSDUCK  := $(shell which jsduck)
 
 MOCHAOPTS ?=
-JSDOCCONF  = ./conf/jsdoc.json
-JSDOCDEST  = ./dist/doc/api
-TESTDIR   ?= test
+APIDOC     = ./docs/api
+TESTDIR    = test
+
+SOURCES  = $(shell find src -name "*.js")
 
 all: test
 
@@ -21,9 +22,17 @@ init-submodules:
 	@ $(GIT) submodule update --init
 
 init: init-npm init-submodule
+	
+$(APIDOC):
+	@ mkdir -p $(APIDOC)
 
-docs:
-	@ $(JSDOC) --configure $(JSDOCCONF) --destination $(JSDOCDEST)
+$(APIDOC)/index.html: $(SOURCES) $(APIDOC)
+ifndef JSDUCK
+	$(error JSDuck not found (install with `gem install jsduck`).)
+endif
+	@ $(JSDUCK) --builtin-classes --output $(APIDOC) -- $(SOURCES)
+
+docs: $(APIDOC)/index.html
 
 dist: init docs
 	
@@ -31,7 +40,7 @@ test: init-npm
 	@ $(MOCHA) $(MOCHAOPTS) test/*.js
 
 clean:
-	rm -rf $(DISTLIB) $(BUILDDIR) $(JSDOCDEST)
+	rm -rf $(DISTLIB) $(BUILDDIR) $(APIDOC)
 	
 dist-clean: clean
 	rm -rf node_modules/

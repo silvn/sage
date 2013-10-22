@@ -1,6 +1,6 @@
 node_modules
 .tm_properties
 logs
-build
 .sageenv
 conf/services.json
+docs/api

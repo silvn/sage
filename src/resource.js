@@ -1,6 +1,11 @@
 var Revalidator = require("revalidator");
 
-module.exports = function Resource(properties) {
+/**
+ * @class Resource
+ * A web resource
+ * @constructor
+ */
+function Resource(properties) {
     var props = {};
     properties = (properties || {});
 
@@ -25,7 +30,14 @@ module.exports = function Resource(properties) {
             }
         }
     }
+    /**
+     * @method
+     * Returns the schema that describes the resource.
+     * @return {Object} A schema object
+     */
     this.schema = function () {
         return properties;
     }
 };
+
+module.exports = Resource;
