@@ -1,4 +1,3 @@
-var util    = require("util");
 var restify = require("restify");
 var Q       = require("q");
 var _       = require("underscore");
@@ -17,7 +16,7 @@ function Service(properties) {
     this.props = (properties || {});
     this.restify = restify.createServer();
     this.restify.use(restify.bodyParser());
-    this.resources = {};
+    this.resMap = {};
     this.entities = {};
     this.isListening = false;
 }
@@ -31,15 +30,7 @@ function Service(properties) {
  * 
  * @static
  */
-Service.extend = function (args) {
-    var Extended = function () {
-        for (var prop in args) {
-            this[prop] = args[prop];
-        }
-    };
-    util.inherits(Extended, Service);
-    return Extended;
-};
+Service.extend = require("./extend");
 
 var DELEGATE_METHODS = [
     /**
@@ -103,9 +94,9 @@ var DELEGATE_METHODS = [
 function ensureDefaultRoutes(service) {
     service.get('/',  function (req, res, next) {
         var resources = {};
-        for (var key in service.resources) {
+        for (var key in service.resMap) {
             resources[service.url() + "/" + key] =
-                service.resources[key].schema();
+                service.resMap[key].schema();
         }
         res.send({ resources: resources });
         return next();
@@ -117,7 +108,7 @@ function ensureDefaultRoutes(service) {
     service.get("/:resource", function (req, res, next) {
         var key = req.params.resource;
         var content = { routes: {} };
-        var resource = service.resources[key];
+        var resource = service.resMap[key];
         if (resource === undefined) {
             return next(new Service.ResourceNotFoundError(
                 "Resource " + key + " not found"));
@@ -249,13 +240,25 @@ Service.prototype.url = function () {
  * @param {String} name The name of the resource
  * @param {Resource} resource (optional) The resource to set
  */
-Service.prototype.resource = function (key, value) {
-    if (value !== undefined) {
-        this.resources[key] = value;
+Service.prototype.resource = function (key, resource) {
+    if (resource !== undefined) {
+        this.resMap[key] = resource;
         this.entities[key] = { identifier: 1, items: {} };
         setResourceRoutes(this, key);
     }
-    return this.resources[key];
+    return this.resMap[key];
+};
+
+/**
+ * @method
+ * Gets the set of resources for this service.
+ * 
+ * @return {Object} The set of resources
+ * @return {String} return.key The key of the resource
+ * @return {Resource} return.value The resource itself
+ */
+Service.prototype.resources = function () {
+    return this.resMap;
 };
 
 /**
