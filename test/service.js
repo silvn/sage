@@ -81,6 +81,19 @@ describe("Service", function () {
         Service.BadDigestError.should.be.a.Function;
         Service.InternalError.should.be.a.Function;
     });
+    it("should allow setting and retrieval of resources", function () {
+        var service = new Service();
+        var resource1 = new Resource();
+        var resource2 = new Resource();
+        service.resource("res1", resource1).should.be.ok;
+        service.resource("res2", resource2).should.be.ok;
+        service.resource("res1").should.eql(resource1);
+        service.resource("res2").should.eql(resource2);
+        service.resources().should.eql({
+            res1: resource1,
+            res2: resource2
+        });
+    });
 });
 
 describe("Service.start()", function () {
@@ -153,9 +166,11 @@ describe("Resource API", function () {
     var baseballSchema = {
         diameter: { type: "number" }
     };
+    var Protein = Resource;
+    var Baseball = Resource.extend(baseballSchema);
     it("should describe resources", function (done) {
-        service.resource("protein", new Resource());
-        service.resource("baseball", new Resource(baseballSchema));
+        service.resource("protein", Protein);
+        service.resource("baseball", Baseball);
         request.get("/").end(function (err, res) {
             [err].should.be.null;
             res.status.should.equal(200);
