@@ -1,15 +1,19 @@
 var util = require("util");
 
 /**
+ * @class
  * @method extend
- * Extends an object.
+ * Extends a class or an object.
  * 
+ *     @example
+ *     var Animal = function () {}
+ *     Animal.extend = require("extend");
+ *     var Cow = Animal.extend({ sound: "moo" });
+ *
  * @param {Object} args Arguments with which to extend
- * @return {Object} The extended object
- * 
- * @static
+ * @return {Object} The extended class
  */
-function extend(args) {
+module.exports = function extend(args) {
     var Super = this;
     var Extended = function () {
         Super.apply(this, arguments);
@@ -20,5 +24,3 @@ function extend(args) {
     util.inherits(Extended, this);
     return Extended;
 };
-
-module.exports = extend;

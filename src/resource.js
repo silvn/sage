@@ -69,6 +69,14 @@ Resource.prototype.properties = function () {
 
 /**
  * @method extend
+ * Extends the resource by specifying a validating schema.
+ * 
+ * @param {Object} schema       The schema to use
+ * @param {String} schema.key   The name of a property
+ * @param {Object} schema.value Descriptor of the property
+ * 
+ * @return {Resource} the extended resource
+ * 
  * @static
  */
 Resource.extend = function (schema) {
