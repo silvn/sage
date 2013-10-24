@@ -30,6 +30,7 @@ function Resource(properties) {
             }
         }
     }
+
     /**
      * @method
      * Returns the schema that describes the resource.
