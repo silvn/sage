@@ -1,6 +1,7 @@
-var Service  = require("./service");
-var Resource = require("./resource");
-var Registry = require("./registry");
+var Service    = require("./service");
+var Resource   = require("./resource");
+var Registry   = require("./registry");
+var Collection = require("./collection");
 
 /**
  * @class Sage
@@ -16,5 +17,8 @@ module.exports = {
     Resource: Resource,
 
     /** @property {Registry} Registry The registry object. */
-    Registry: Registry
+    Registry: Registry,
+
+    /** @property {Collection} Collection The collection class. */
+    Collection: Collection
 };
