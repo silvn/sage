@@ -22,5 +22,7 @@ describe("extend", function () {
         var B = extend.call(A, {});
         var b = new B("blue");
         value.should.equal("blue");
+        b.should.be.instanceof(A);
+        b.should.be.instanceof(B);
     });
 });

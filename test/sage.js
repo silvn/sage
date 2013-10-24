@@ -8,5 +8,6 @@ describe("Sage", function () {
         Sage.Service.should.be.a.Function;
         Sage.Resource.should.be.a.Function;
         Sage.Registry.should.be.an.Object;
+        Sage.Collection.should.be.a.Function;
     });
 });
