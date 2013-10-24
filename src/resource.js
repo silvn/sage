@@ -3,8 +3,12 @@ var Revalidator = require("revalidator");
 
 /**
  * @class Resource
- * A web resource
+ * A web resource.
+ * 
  * @constructor
+ * Creates a resource.
+ * 
+ * @param {Object} properties A set of initial properties
  */
 function Resource(properties) {
     this.props = {};
@@ -29,11 +33,14 @@ Resource.schema = function () { return {}; };
 
 /**
  * @method property
- * Gets or sets a property
+ * Gets or sets a property. If the property has a schema defined, then the value
+ * is validated.
  * 
  * @param {String} name    The name of the property
  * @param value (optional) The value of the property
  * @return {Mixed} The value of the property
+ * 
+ * See {@link Resource#extend}
  */
 Resource.prototype.property = function (prop, value) {
     if (value !== undefined) {
