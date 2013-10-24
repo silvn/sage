@@ -3,7 +3,7 @@ var util = require("util");
 /**
  * @class
  * @method extend
- * Extends a class or an object.
+ * Extends a class or an .
  * 
  *     @example
  *     var Animal = function () {}
@@ -21,6 +21,6 @@ module.exports = function extend(args) {
             this[prop] = args[prop];
         }
     };
-    util.inherits(Extended, this);
+    Extended.prototype = new Super();
     return Extended;
 };

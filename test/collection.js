@@ -24,6 +24,12 @@ describe("Collection", function () {
         (function () { collection.remove(new Object()); }).should.throw();
     });
     it("should accept a resource as a constructor argument", function () {
-        var collection = new Collection({ resource: new Resource() });
+        var Color = Resource.extend({
+            name: { type: "string" }
+        });
+        var collection = new Collection({ resource: Color });
+        collection.add(new Color()).should.be.ok;
+        collection.size().should.equal(1);
+        (function () { collection.add(new Resource()); }).should.throw();
     });
 });

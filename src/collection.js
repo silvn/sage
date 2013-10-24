@@ -6,7 +6,12 @@ var Resource = require("./resource");
  * @constructor
  */
 function Collection(params) {
+    params = (params || {});
     var items = [];
+    var protoRes = Object;
+    if (params.resource !== undefined) {
+        protoRes = params.resource;
+    }
 
     /**
      * @method add
@@ -15,9 +20,15 @@ function Collection(params) {
      * @chainable
      */
     this.add = function (resource) {
+        if (!(resource instanceof protoRes)) {
+            throw new Error(
+                "Collection can only contain resources of type " +   
+                protoRes
+            );
+        }
         items.push(resource);
         return this;
-    };
+    }
 
     /**
      * @method size
