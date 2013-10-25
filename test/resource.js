@@ -89,5 +89,21 @@ describe("Resource", function () {
             done();
         });
     });
+    describe("#parse()", function () {
+        it("should define behavior for fetch()", function (done) {
+            var Cow = Resource.extend({
+                parse: function (data) {
+                    this.property("type", "Bremen");
+                    return data;
+                }
+            });
+            var cow = new Cow({ type: "Angus" });
+            cow.property("type").should.equal("Angus");
+            cow.fetch().done(function () {
+                cow.property("type").should.equal("Bremen");
+                done();
+            });
+        });
+    })
 });
 

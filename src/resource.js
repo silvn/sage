@@ -5,7 +5,7 @@ var URL         = require("url");
 
 /* Special options parsed from the extend call, not instance properties
  */
-var RES_OPTIONS = ["url"];
+var RES_OPTIONS = ["url", "parse"];
 
 /**
  * @class Resource
@@ -47,8 +47,9 @@ Resource.prototype.fetch = function () {
     var promise = {};
 
     if (self.url() === null) {
+        var parsed = self.parse();
         promise.done = function (callback) {
-            callback.call(self, null, null);
+            callback.call(self, parsed);
         }
     } else {
         var url = URL.parse(self.url());
@@ -65,10 +66,11 @@ Resource.prototype.fetch = function () {
         }
     
         self.client.get(url.path, function (err, req, res, obj) {
-            for (var key in obj) {
-                self.property(key, obj[key]);
+            var parsed = self.parse(obj);
+            for (var key in parsed) {
+                self.property(key, parsed[key]);
             }
-            self.doneFetchCallback(err, obj);
+            self.doneFetchCallback(err, parsed);
         });
     }
     return promise;
@@ -119,6 +121,14 @@ Resource.prototype.properties = function () {
     return this.props;
 };
 
+Resource.url = Resource.prototype.url = function () {
+    return null;
+};
+
+Resource.parse = Resource.prototype.parse = function (data) {
+    return data;
+};
+
 
 /**
  * @method extend
@@ -137,22 +147,23 @@ Resource.extend = function (args) {
     var Extended = extend.apply(this, arguments);
     var schema = {};
     for (var a in args) {
-        if (args.hasOwnProperty(a) && typeof args[a] === "object")
+        if (args.hasOwnProperty(a) && typeof(args[a]) === "object")
             schema[a] = args[a];
     };
     RES_OPTIONS.forEach(function (option) {
-        Extended[option] = Extended.prototype[option] = (function () {
-            var value;
-            if (args.hasOwnProperty(option)) {
-                value = args[option];
-                schema[option] = undefined;
+        if (args.hasOwnProperty(option)) {
+            schema[option] = undefined;
+            if (typeof(args[option]) === "function") {
+                Extended[option] = Extended.prototype[option] = args[option];
             } else {
-                value = null;
+                Extended[option] = Extended.prototype[option] = (function () {
+                    var value = args[option];
+                    return function () {
+                        return value;
+                    }
+                })();
             }
-            return function () {
-                return value;
-            }
-        })();
+        }
     });
     Extended.schema = Extended.prototype.schema = function () {
         return schema;

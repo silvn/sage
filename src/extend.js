@@ -34,5 +34,7 @@ module.exports = function extend(args) {
     _.extend(Extended.prototype, args);
     Extended.extend = extend;
 
+    Extended.__super__ = Super.prototype;
+
     return Extended;
 };
