@@ -1,5 +1,12 @@
 var Service = require(__dirname + "/service.js");
 
+/**
+ * @class Registry
+ * Describes a set of registered services.
+ * 
+ * @extends Service
+ * @singleton
+ */
 var Registry = new Service();
 
 var services = {};

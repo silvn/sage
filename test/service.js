@@ -23,9 +23,6 @@ function testMethod(method, done, expectBody) {
 }
 
 describe("Service", function () {
-    it("should be a function", function () {
-        Service.should.be.a.Function;
-    });
     it("should allow inheritance", function () {
         var SpecificService = Service.extend({
             foo: function () {}
@@ -33,10 +30,6 @@ describe("Service", function () {
         var service = new SpecificService();
         service.should.be.an.instanceOf(Service);
         service.foo.should.be.a.Function;
-    });
-    it("should allow normal instantiation", function () {
-        var service = new Service();
-        service.should.be.an.instanceOf(Service);
     });
     it("should support GET methods", function (done) {
         testMethod('get', done);
@@ -80,6 +73,19 @@ describe("Service", function () {
         Service.RestError.should.be.a.Function;
         Service.BadDigestError.should.be.a.Function;
         Service.InternalError.should.be.a.Function;
+    });
+    it("should allow setting and retrieval of resources", function () {
+        var service = new Service();
+        var resource1 = new Resource();
+        var resource2 = new Resource();
+        service.resource("res1", resource1).should.be.ok;
+        service.resource("res2", resource2).should.be.ok;
+        service.resource("res1").should.eql(resource1);
+        service.resource("res2").should.eql(resource2);
+        service.resources().should.eql({
+            res1: resource1,
+            res2: resource2
+        });
     });
 });
 
@@ -153,9 +159,11 @@ describe("Resource API", function () {
     var baseballSchema = {
         diameter: { type: "number" }
     };
+    var Protein = Resource;
+    var Baseball = Resource.extend(baseballSchema);
     it("should describe resources", function (done) {
-        service.resource("protein", new Resource());
-        service.resource("baseball", new Resource(baseballSchema));
+        service.resource("protein", Protein);
+        service.resource("baseball", Baseball);
         request.get("/").end(function (err, res) {
             [err].should.be.null;
             res.status.should.equal(200);
