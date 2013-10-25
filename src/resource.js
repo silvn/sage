@@ -9,7 +9,29 @@ var RES_OPTIONS = ["url", "parse"];
 
 /**
  * @class Resource
- * A web resource.
+ * A web resource. Properties and utilities for describing, operating on, and
+ * managing data across web services.
+ * 
+ * A resource can be a simple container for properties with validation:
+ * 
+ *     @example
+ *     var Cat = Resource.extend({
+ *         breed: { type: "string" },
+ *         lives: { type: "number" }
+ *     });
+ *     var cat = new Cat({ breed: "Siamese" });
+ *     // Changed my mind...
+ *     cat.property("breed", "Bengal"); // OK
+ *     cat.property("lives", "Nine"); // NOT OK!
+ * 
+ * A resource can also be fetched remotely:
+ * 
+ *     @example
+ *     var Cat = Resource.extend({ url: "http://catserver.com/cat/5" });
+ *     var cat = new Cat();
+ *     cat.fetch().done(function () {
+ *         alert(this.properties())
+ *     });
  * 
  * @constructor
  * Creates a resource.
@@ -121,10 +143,22 @@ Resource.prototype.properties = function () {
     return this.props;
 };
 
+/**
+ * @method url
+ * Returns the URL backing the resource.
+ * @return {String}
+ * @static
+ */
 Resource.url = Resource.prototype.url = function () {
     return null;
 };
 
+/**
+ * @method parse
+ * Parses data into the resource.
+ * @param {Object} data The JSON object to be parsed
+ * @return {Object} A JSON object
+ */
 Resource.parse = Resource.prototype.parse = function (data) {
     return data;
 };
