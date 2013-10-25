@@ -10,7 +10,7 @@ var Collection = Resource.extend({
         Resource.call(this, params); // super() constructor
         params = (params || {});
         this.items = [];
-        this.ProtoResource = Object;
+        this.ProtoResource = Resource;
         if (params.resource !== undefined) {
             this.ProtoResource = params.resource;
         }
@@ -73,7 +73,7 @@ Collection.prototype.remove = function (resource) {
 Collection.prototype.parse = function (data) {
     var self = this;
     data.forEach(function (datum) {
-        self.add(new Resource(datum));
+        self.add(new self.ProtoResource(datum));
     });
 }
 

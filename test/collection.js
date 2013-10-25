@@ -9,22 +9,22 @@ describe("Collection", function () {
         collection.schema.should.be.a.Function;
     });
     it("should have chainable methods", function () {
-        collection.add(new Object()).should.equal(collection);
+        collection.add(new Resource()).should.equal(collection);
     });
     it("should allow adding and counting of elements", function () {
         collection.add(resource);
-        collection.add(new Object());
+        collection.add(new Resource());
         collection.size().should.equal(3);
     });
     it("should allow retrieval of resources", function () {
-        collection.get(0).should.eql({});
+        collection.get(0).should.eql(new Resource());
     });
     it("should allow removal of objects", function () {
         var removed = collection.remove(resource);
         collection.size().should.equal(2);
     });
     it("should throw when trying to remove non-member", function () {
-        (function () { collection.remove(new Object()); }).should.throw();
+        (function () { collection.remove(new Resource()); }).should.throw();
     });
     it("should accept a resource as a constructor argument", function () {
         var Color = Resource.extend({
@@ -61,6 +61,17 @@ describe("Collection", function () {
                 done();
             })
         });
+        it("should fetch on typed Resources", function (done) {
+            var Cat = Resource.extend({ hairball: { type: "string" }});
+            var Cats = Collection.extend({
+                url: "http://0.0.0.0:55555/cats",
+            });
+            var cats = new Cats({ resource: Cat });
+            cats.fetch().done(function () {
+                this.size().should.equal(2);
+                done();
+            });
+        })
         after(function (done) {
             server.close();
             done();
