@@ -1,5 +1,10 @@
 var extend      = require("./extend");
 var Revalidator = require("revalidator");
+var Restify     = require("restify");
+
+/* Special options parsed from the extend call, not instance properties
+ */
+var RES_OPTIONS = ["url"];
 
 /**
  * @class Resource
@@ -26,6 +31,27 @@ function Resource(properties) {
  */
 Resource.prototype.schema = function () {
     return this.schema;
+};
+
+Resource.prototype.fetch = function () {
+    var self = this;
+    if (self.client === undefined) {
+        self.client = Restify.createJsonClient({ url: self.url() });
+    }
+    self.doneFetchCallback = undefined;
+    var promise = {
+        done: function (callback) {
+            self.doneFetchCallback = callback;
+        }
+    };
+    
+    self.client.get("/", function (err, req, res, obj) {
+        for (var key in obj) {
+            self.property(key, obj[key]);
+        }
+        self.doneFetchCallback(err, obj);
+    });
+    return promise;
 };
 
 /** @ignore */
@@ -89,7 +115,14 @@ Resource.prototype.properties = function () {
 Resource.extend = function (schema) {
     var Extended = extend.apply(Resource, {});
     schema = (schema || {});
-
+    for (var i = 0; i < RES_OPTIONS.length; i++) {
+        var name = RES_OPTIONS[i];
+        if (schema.hasOwnProperty(name)) {
+            Extended[name] = Extended.prototype[name] = function () {
+                return schema[name]
+            };
+        }
+    }
     Extended.schema = Extended.prototype.schema =
         function () { return schema; };
     return Extended;

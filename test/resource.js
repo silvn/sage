@@ -28,6 +28,10 @@ describe("Resource", function () {
             name:  "Leo"
         });
     });
+    it("should handle URL as an option to extend", function () {
+        var RemoteResource = Resource.extend({ url: "http://cnn.com" });
+        RemoteResource.url().should.equal("http://cnn.com");
+    });
     it("should throw an error on invalid data", function () {
         var Cat = Resource.extend({
             food: { type: "string" }
@@ -51,4 +55,27 @@ describe("Resource", function () {
         Resource.schema.should.be.a.Function;
         Resource.schema().should.eql({});        
     });
+    describe("#fetch()", function () {
+        var app  = require("express")();
+        var http = require("http");
+        app.get("/", function (req, res) {
+            res.send(200, { action: "meow" });
+        });
+        var server = http.createServer(app).listen(54321);
+        it("should fetch a resource by URL", function (done) {
+            var Cat = Resource.extend({
+                url: "http://0.0.0.0:54321"
+            });
+            var cat = new Cat();
+            cat.fetch().done(function () {
+                this.property("action").should.equal("meow");
+                done();
+            });
+        });
+        after(function (done) {
+            server.close();
+            done();
+        });
+    });
 });
+

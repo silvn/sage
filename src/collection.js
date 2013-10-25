@@ -8,9 +8,9 @@ var Resource = require("./resource");
 function Collection(params) {
     params = (params || {});
     var items = [];
-    var protoRes = Object;
+    var ProtoResource = Object;
     if (params.resource !== undefined) {
-        protoRes = params.resource;
+        ProtoResource = params.resource;
     }
 
     /**
@@ -20,10 +20,10 @@ function Collection(params) {
      * @chainable
      */
     this.add = function (resource) {
-        if (!(resource instanceof protoRes)) {
+        if (!(resource instanceof ProtoResource)) {
             throw new Error(
                 "Collection can only contain resources of type " +   
-                protoRes
+                ProtoResource
             );
         }
         items.push(resource);
