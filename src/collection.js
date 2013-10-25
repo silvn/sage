@@ -3,6 +3,14 @@ var Resource = require("./resource");
 /**
  * @class Collection
  * A collection of {@link Resource}s.
+ * 
+ *     @example
+ *     var Cats = Collection.extend({ url: "http://catserver.com" });
+ *     var cats = new Cats();
+ *     cats.add(new Resource());
+ *     cats.fetch().done(function () { ... });
+ * 
+ * @extends Resource
  * @constructor
  */
 var Collection = Resource.extend({
@@ -70,16 +78,23 @@ Collection.prototype.remove = function (resource) {
     throw new Error("Cannot remove non-member resource");
 }
 
+/**
+ * @method parse
+ * Parses multiple resources into the collection.
+ * @inheritdoc Resource#parse
+ */
 Collection.prototype.parse = function (data) {
     var self = this;
     data.forEach(function (datum) {
         self.add(new self.ProtoResource(datum));
     });
+    return data;
 }
 
 /**
  * @method extend
  * @inheritdoc Resource#extend
+ * @static
  */
 Collection.extend = Resource.extend;
 
