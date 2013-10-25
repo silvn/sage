@@ -1,6 +1,7 @@
 var extend      = require("./extend");
 var Revalidator = require("revalidator");
 var Restify     = require("restify");
+var URL         = require("url");
 
 /* Special options parsed from the extend call, not instance properties
  */
@@ -33,24 +34,43 @@ Resource.prototype.schema = function () {
     return this.schema;
 };
 
+/**
+ * @method fetch
+ * Fetches the resource from a remote service.
+ * @return {Object} A promise
+ * @return {Function} return.done A handler for after the resource is fetched
+ *                                from the server.
+ */
 Resource.prototype.fetch = function () {
     var self = this;
-    if (self.client === undefined) {
-        self.client = Restify.createJsonClient({ url: self.url() });
-    }
     self.doneFetchCallback = undefined;
-    var promise = {
-        done: function (callback) {
+    var promise = {};
+
+    if (self.url() === null) {
+        promise.done = function (callback) {
+            callback.call(self, null, null);
+        }
+    } else {
+        var url = URL.parse(self.url());
+        promise.done = function (callback) {
             self.doneFetchCallback = callback;
+        };
+        if (self.client === undefined) {
+            self.client = Restify.createJsonClient({
+                url: URL.format({
+                    host: url.host,
+                    protocol: url.protocol
+                })
+            });
         }
-    };
     
-    self.client.get("/", function (err, req, res, obj) {
-        for (var key in obj) {
-            self.property(key, obj[key]);
-        }
-        self.doneFetchCallback(err, obj);
-    });
+        self.client.get(url.path, function (err, req, res, obj) {
+            for (var key in obj) {
+                self.property(key, obj[key]);
+            }
+            self.doneFetchCallback(err, obj);
+        });
+    }
     return promise;
 };
 
@@ -117,11 +137,12 @@ Resource.extend = function (schema) {
     schema = (schema || {});
     for (var i = 0; i < RES_OPTIONS.length; i++) {
         var name = RES_OPTIONS[i];
-        if (schema.hasOwnProperty(name)) {
-            Extended[name] = Extended.prototype[name] = function () {
-                return schema[name]
-            };
-        }
+        Extended[name] = Extended.prototype[name] = (function () {
+            var value = (schema.hasOwnProperty(name) ? schema[name] : null); 
+            return function () {
+                return value;
+            }
+        })();
     }
     Extended.schema = Extended.prototype.schema =
         function () { return schema; };

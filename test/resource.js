@@ -32,6 +32,11 @@ describe("Resource", function () {
         var RemoteResource = Resource.extend({ url: "http://cnn.com" });
         RemoteResource.url().should.equal("http://cnn.com");
     });
+    it("should return a null URL when not specified in extend()", function () {
+        var AResource = Resource.extend();
+        [AResource.url()].should.be.null;
+        [AResource.url()].should.be.defined;
+    });
     it("should throw an error on invalid data", function () {
         var Cat = Resource.extend({
             food: { type: "string" }
@@ -58,17 +63,25 @@ describe("Resource", function () {
     describe("#fetch()", function () {
         var app  = require("express")();
         var http = require("http");
-        app.get("/", function (req, res) {
+        app.get("/cat", function (req, res) {
             res.send(200, { action: "meow" });
         });
+        
         var server = http.createServer(app).listen(54321);
         it("should fetch a resource by URL", function (done) {
-            var Cat = Resource.extend({
-                url: "http://0.0.0.0:54321"
-            });
+            var Cat = Resource.extend({ url: "http://0.0.0.0:54321/cat" });
             var cat = new Cat();
             cat.fetch().done(function () {
                 this.property("action").should.equal("meow");
+                done();
+            });
+        });
+        it("should do nothing when no URL is defined", function (done) {
+            var Dog = Resource.extend();
+            var dog = new Dog({ name: "Caleb" });
+            [dog.url()].should.be.null;
+            dog.fetch().done(function () {
+                this.property("name").should.equal("Caleb");
                 done();
             });
         });
