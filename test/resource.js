@@ -1,9 +1,6 @@
 var Resource = require("../src/resource");
 
 describe("Resource", function () {
-    it("should be a function", function () {
-        Resource.should.be.a.Function;
-    });
     it("should allow extending", function () {
         Resource.extend.should.be.Function;
         var ExtendedResource = Resource.extend();
@@ -29,8 +26,10 @@ describe("Resource", function () {
         });
     });
     it("should handle URL as an option to extend", function () {
-        var RemoteResource = Resource.extend({ url: "http://cnn.com" });
-        RemoteResource.url().should.equal("http://cnn.com");
+        var ExtendedResource = Resource.extend({ url: "http://cnn.com" });
+        var resource = new ExtendedResource();
+        resource.url().should.equal("http://cnn.com");
+        ExtendedResource.url().should.equal("http://cnn.com");
     });
     it("should return a null URL when not specified in extend()", function () {
         var AResource = Resource.extend();

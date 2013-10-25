@@ -132,20 +132,31 @@ Resource.prototype.properties = function () {
  * 
  * @static
  */
-Resource.extend = function (schema) {
-    var Extended = extend.apply(Resource, {});
-    schema = (schema || {});
-    for (var i = 0; i < RES_OPTIONS.length; i++) {
-        var name = RES_OPTIONS[i];
-        Extended[name] = Extended.prototype[name] = (function () {
-            var value = (schema.hasOwnProperty(name) ? schema[name] : null); 
+Resource.extend = function (args) {
+    args = (args || {});
+    var Extended = extend.apply(this, arguments);
+    var schema = {};
+    for (var a in args) {
+        if (args.hasOwnProperty(a) && typeof args[a] === "object")
+            schema[a] = args[a];
+    };
+    RES_OPTIONS.forEach(function (option) {
+        Extended[option] = Extended.prototype[option] = (function () {
+            var value;
+            if (args.hasOwnProperty(option)) {
+                value = args[option];
+                schema[option] = undefined;
+            } else {
+                value = null;
+            }
             return function () {
                 return value;
             }
         })();
-    }
-    Extended.schema = Extended.prototype.schema =
-        function () { return schema; };
+    });
+    Extended.schema = Extended.prototype.schema = function () {
+        return schema;
+    };
     return Extended;
 }
 
