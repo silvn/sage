@@ -1,9 +1,6 @@
 var Resource = require("../src/resource");
 
 describe("Resource", function () {
-    it("should be a function", function () {
-        Resource.should.be.a.Function;
-    });
     it("should allow extending", function () {
         Resource.extend.should.be.Function;
         var ExtendedResource = Resource.extend();
@@ -28,6 +25,17 @@ describe("Resource", function () {
             name:  "Leo"
         });
     });
+    it("should handle URL as an option to extend", function () {
+        var ExtendedResource = Resource.extend({ url: "http://cnn.com" });
+        var resource = new ExtendedResource();
+        resource.url().should.equal("http://cnn.com");
+        ExtendedResource.url().should.equal("http://cnn.com");
+    });
+    it("should return a null URL when not specified in extend()", function () {
+        var AResource = Resource.extend();
+        [AResource.url()].should.be.null;
+        [AResource.url()].should.be.defined;
+    });
     it("should throw an error on invalid data", function () {
         var Cat = Resource.extend({
             food: { type: "string" }
@@ -51,4 +59,51 @@ describe("Resource", function () {
         Resource.schema.should.be.a.Function;
         Resource.schema().should.eql({});        
     });
+    describe("#fetch()", function () {
+        var app  = require("express")();
+        var http = require("http");
+        app.get("/cat", function (req, res) {
+            res.send(200, { action: "meow" });
+        });
+        
+        var server = http.createServer(app).listen(54321);
+        it("should fetch a resource by URL", function (done) {
+            var Cat = Resource.extend({ url: "http://0.0.0.0:54321/cat" });
+            var cat = new Cat();
+            cat.fetch().done(function () {
+                this.property("action").should.equal("meow");
+                done();
+            });
+        });
+        it("should do nothing when no URL is defined", function (done) {
+            var Dog = Resource.extend();
+            var dog = new Dog({ name: "Caleb" });
+            [dog.url()].should.be.null;
+            dog.fetch().done(function () {
+                this.property("name").should.equal("Caleb");
+                done();
+            });
+        });
+        after(function (done) {
+            server.close();
+            done();
+        });
+    });
+    describe("#parse()", function () {
+        it("should define behavior for fetch()", function (done) {
+            var Cow = Resource.extend({
+                parse: function (data) {
+                    this.property("type", "Bremen");
+                    return data;
+                }
+            });
+            var cow = new Cow({ type: "Angus" });
+            cow.property("type").should.equal("Angus");
+            cow.fetch().done(function () {
+                cow.property("type").should.equal("Bremen");
+                done();
+            });
+        });
+    })
 });
+

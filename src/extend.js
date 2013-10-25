@@ -1,4 +1,4 @@
-var util = require("util");
+var _ = require("underscore");
 
 /**
  * @class
@@ -14,13 +14,27 @@ var util = require("util");
  * @return {Object} The extended class
  */
 module.exports = function extend(args) {
+    args = (args || {});
     var Super = this;
-    var Extended = function () {
-        Super.apply(this, arguments);
-        for (var prop in args) {
-            this[prop] = args[prop];
-        }
-    };
-    Extended.prototype = new Super();
+    var Extended;
+
+    if (args.hasOwnProperty("constructor")) {
+        Extended = args["constructor"];
+    } else {
+        Extended = function () { return Super.apply(this, arguments); };
+    }
+
+    _.extend(Extended, Super);
+
+    // Set prototype chain
+    var Proto = function () { this.constructor = Extended; };
+    Proto.prototype = Super.prototype;
+    Extended.prototype = new Proto();
+
+    _.extend(Extended.prototype, args);
+    Extended.extend = extend;
+
+    Extended.__super__ = Super.prototype;
+
     return Extended;
 };

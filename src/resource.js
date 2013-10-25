@@ -1,5 +1,11 @@
 var extend      = require("./extend");
 var Revalidator = require("revalidator");
+var Restify     = require("restify");
+var URL         = require("url");
+
+/* Special options parsed from the extend call, not instance properties
+ */
+var RES_OPTIONS = ["url", "parse"];
 
 /**
  * @class Resource
@@ -26,6 +32,48 @@ function Resource(properties) {
  */
 Resource.prototype.schema = function () {
     return this.schema;
+};
+
+/**
+ * @method fetch
+ * Fetches the resource from a remote service.
+ * @return {Object} A promise
+ * @return {Function} return.done A handler for after the resource is fetched
+ *                                from the server.
+ */
+Resource.prototype.fetch = function () {
+    var self = this;
+    self.doneFetchCallback = undefined;
+    var promise = {};
+
+    if (self.url() === null) {
+        var parsed = self.parse();
+        promise.done = function (callback) {
+            callback.call(self, parsed);
+        }
+    } else {
+        var url = URL.parse(self.url());
+        promise.done = function (callback) {
+            self.doneFetchCallback = callback;
+        };
+        if (self.client === undefined) {
+            self.client = Restify.createJsonClient({
+                url: URL.format({
+                    host: url.host,
+                    protocol: url.protocol
+                })
+            });
+        }
+    
+        self.client.get(url.path, function (err, req, res, obj) {
+            var parsed = self.parse(obj);
+            for (var key in parsed) {
+                self.property(key, parsed[key]);
+            }
+            self.doneFetchCallback(err, parsed);
+        });
+    }
+    return promise;
 };
 
 /** @ignore */
@@ -73,6 +121,14 @@ Resource.prototype.properties = function () {
     return this.props;
 };
 
+Resource.url = Resource.prototype.url = function () {
+    return null;
+};
+
+Resource.parse = Resource.prototype.parse = function (data) {
+    return data;
+};
+
 
 /**
  * @method extend
@@ -86,12 +142,32 @@ Resource.prototype.properties = function () {
  * 
  * @static
  */
-Resource.extend = function (schema) {
-    var Extended = extend.apply(Resource, {});
-    schema = (schema || {});
-
-    Extended.schema = Extended.prototype.schema =
-        function () { return schema; };
+Resource.extend = function (args) {
+    args = (args || {});
+    var Extended = extend.apply(this, arguments);
+    var schema = {};
+    for (var a in args) {
+        if (args.hasOwnProperty(a) && typeof(args[a]) === "object")
+            schema[a] = args[a];
+    };
+    RES_OPTIONS.forEach(function (option) {
+        if (args.hasOwnProperty(option)) {
+            schema[option] = undefined;
+            if (typeof(args[option]) === "function") {
+                Extended[option] = Extended.prototype[option] = args[option];
+            } else {
+                Extended[option] = Extended.prototype[option] = (function () {
+                    var value = args[option];
+                    return function () {
+                        return value;
+                    }
+                })();
+            }
+        }
+    });
+    Extended.schema = Extended.prototype.schema = function () {
+        return schema;
+    };
     return Extended;
 }
 

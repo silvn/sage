@@ -23,9 +23,6 @@ function testMethod(method, done, expectBody) {
 }
 
 describe("Service", function () {
-    it("should be a function", function () {
-        Service.should.be.a.Function;
-    });
     it("should allow inheritance", function () {
         var SpecificService = Service.extend({
             foo: function () {}
@@ -33,10 +30,6 @@ describe("Service", function () {
         var service = new SpecificService();
         service.should.be.an.instanceOf(Service);
         service.foo.should.be.a.Function;
-    });
-    it("should allow normal instantiation", function () {
-        var service = new Service();
-        service.should.be.an.instanceOf(Service);
     });
     it("should support GET methods", function (done) {
         testMethod('get', done);

@@ -1,9 +1,6 @@
 var extend = require("../src/extend");
 
 describe("extend", function () {
-    it("should be a function", function () {
-        extend.should.be.a.Function;
-    });
     it("should allow extending classes", function () {
         function A() { this.unextended = function () {} };
         A.prototype.f1 = function () {};
@@ -16,7 +13,7 @@ describe("extend", function () {
         a.unextended.should.be.a.Function;
         [b.undextended].should.be.undefined;
     });
-    it("should preserve the super's constructor", function () {
+    it("should preserve the base constructor", function () {
         var value = undefined;
         function A(color) { value = color; }
         var B = extend.call(A, {});
@@ -24,5 +21,15 @@ describe("extend", function () {
         value.should.equal("blue");
         b.should.be.instanceof(A);
         b.should.be.instanceof(B);
+    });
+    it("should allow overriding the constructor", function () {
+        function A(color) { this.value = "blue" };
+        var B = extend.call(A, {
+            constructor: function () { this.value = "green" }
+        });
+        var a = new A();
+        var b = new B();
+        a.value.should.equal("blue");
+        b.value.should.equal("green");
     });
 });
