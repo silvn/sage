@@ -2,6 +2,7 @@ var path     = require('path');
 var optimist = require('optimist');
 var fs       = require('fs');
 var http     = require('http');
+var util     = require('util');
 
 var optimist = require('optimist')
     .usage("Start a Sage service\nUsage: $0 [options]")
@@ -26,10 +27,12 @@ function absolutePath(filename) {
 
 var serviceName = argv.name;
 if (argv.log) {
-    logFile = fs.createWriteStream(argv.log);
-} else {
-    logFile = process.stdout;
+    var log = fs.createWriteStream(argv.log);
+    console.log = console.err = function () {
+        log.write(util.format.apply(null, arguments) + "\n");
+    };
 }
 
 var service = require(argv.service);
 service.start({ port: argv.port });
+console.log("[service %s %s]", argv.name, service.url());
