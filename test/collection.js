@@ -49,8 +49,9 @@ describe("Collection", function () {
             ]);
         });
         var server = http.createServer(app).listen(55555);
+        var CAT_URL = "http://0.0.0.0:55555/cats";
         it("should fetch a collection by URL", function (done) {
-            var Cats = Collection.extend({ url: "http://0.0.0.0:55555/cats" });
+            var Cats = Collection.extend({ url: CAT_URL });
             var cats = new Cats();
             cats.fetch().done(function () {
                 this.size().should.equal(2);
@@ -64,14 +65,48 @@ describe("Collection", function () {
         it("should fetch on typed Resources", function (done) {
             var Cat = Resource.extend({ hairball: { type: "string" }});
             var Cats = Collection.extend({
-                url: "http://0.0.0.0:55555/cats",
+                url: CAT_URL
             });
             var cats = new Cats({ resource: Cat });
             cats.fetch().done(function () {
                 this.size().should.equal(2);
                 done();
             });
-        })
+        });
+        it("should continue parsing when 'parse:' is defined", function (done) {
+            var parseOverridden = false;
+            var Cats = Collection.extend({
+                url: CAT_URL,
+                parse: function (data) {
+                    parseOverridden = true;
+                    data.forEach(function (datum) {
+                        datum.name = datum.name + " the Cat";
+                    });
+                    return data;
+                }
+            });
+            var cats = new Cats();
+            cats.fetch().done(function () {
+                this.size().should.equal(2);
+                this.get(0).property("name").should.equal("Felix the Cat");
+                this.get(1).property("name").should.equal("Garfield the Cat");
+                parseOverridden.should.be.true;
+                done();
+            });
+        });
+        it("should not parse when no data is returned", function (done) {
+            var parseOverridden = false;
+            var Cats = Collection.extend({
+                url: CAT_URL,
+                parse: function (data) { parseOverridden = true; return null; }
+            });
+            var cats = new Cats();
+            cats.fetch().done(function () {
+                this.size().should.equal(0);
+                parseOverridden.should.be.true;
+                done();
+            });
+        });
         after(function (done) {
             server.close();
             done();

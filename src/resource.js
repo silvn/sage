@@ -86,12 +86,9 @@ Resource.prototype.fetch = function () {
                 })
             });
         }
-    
         self.client.get(url.path, function (err, req, res, obj) {
             var parsed = self.parse(obj);
-            for (var key in parsed) {
-                self.property(key, parsed[key]);
-            }
+            self.defaultParse(parsed);
             self.doneFetchCallback(err, parsed);
         });
     }
@@ -162,6 +159,13 @@ Resource.url = Resource.prototype.url = function () {
 Resource.parse = Resource.prototype.parse = function (data) {
     return data;
 };
+
+/** @ignore */
+Resource.prototype.defaultParse = function (parsed) {
+    for (var key in parsed) {
+        this.property(key, parsed[key]);
+    }
+}
 
 
 /**
