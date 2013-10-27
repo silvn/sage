@@ -94,6 +94,19 @@ describe("Collection", function () {
                 done();
             });
         });
+        it("should not parse when no data is returned", function (done) {
+            var parseOverridden = false;
+            var Cats = Collection.extend({
+                url: CAT_URL,
+                parse: function (data) { parseOverridden = true; return null; }
+            });
+            var cats = new Cats();
+            cats.fetch().done(function () {
+                this.size().should.equal(0);
+                parseOverridden.should.be.true;
+                done();
+            });
+        });
         after(function (done) {
             server.close();
             done();

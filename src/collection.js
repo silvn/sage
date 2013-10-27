@@ -90,9 +90,11 @@ Collection.prototype.parse = function (data) {
 /** @ignore */
 Collection.prototype.defaultParse = function (data) {
     var self = this;
-    data.forEach(function (datum) {
-        self.add(new self.ProtoResource(datum));
-    });
+    if (data !== null) {
+        data.forEach(function (datum) {
+            self.add(new self.ProtoResource(datum));
+        });
+    }
     return data;
 }
 
