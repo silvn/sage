@@ -1,4 +1,5 @@
 var extend      = require("./extend");
+var Promise     = require("./promise");
 var Revalidator = require("revalidator");
 var Restify     = require("restify");
 var URL         = require("url");
@@ -65,19 +66,15 @@ Resource.prototype.schema = function () {
  */
 Resource.prototype.fetch = function () {
     var self = this;
-    self.doneFetchCallback = undefined;
-    var promise = {};
-
+    var promise = new Promise(this);
     if (self.url() === null) {
-        var parsed = self.parse();
-        promise.done = function (callback) {
-            callback.call(self, parsed);
+        try {
+            promise.resolve(self.parse());
+        } catch (exception) {
+            promise.resolveFail(exception);
         }
     } else {
         var url = URL.parse(self.url());
-        promise.done = function (callback) {
-            self.doneFetchCallback = callback;
-        };
         if (self.client === undefined) {
             self.client = Restify.createJsonClient({
                 url: URL.format({
@@ -87,9 +84,13 @@ Resource.prototype.fetch = function () {
             });
         }
         self.client.get(url.path, function (err, req, res, obj) {
-            var parsed = self.parse(obj);
-            self.defaultParse(parsed);
-            self.doneFetchCallback(err, parsed);
+            try {
+                var parsed = self.parse(obj);
+                self.defaultParse(parsed);
+                promise.resolve(err, parsed);
+            } catch (exception) {
+                promise.resolveFail(exception);
+            }
         });
     }
     return promise;

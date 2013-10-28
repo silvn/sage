@@ -65,7 +65,6 @@ describe("Resource", function () {
         app.get("/cat", function (req, res) {
             res.send(200, { action: "meow" });
         });
-        
         var server = http.createServer(app).listen(54321);
         it("should fetch a resource by URL", function (done) {
             var Cat = Resource.extend({ url: "http://0.0.0.0:54321/cat" });
@@ -81,6 +80,18 @@ describe("Resource", function () {
             [dog.url()].should.be.null;
             dog.fetch().done(function () {
                 this.property("name").should.equal("Caleb");
+                done();
+            });
+        });
+        it("should call fail() when an exception is thrown", function (done) {
+            var BadResource = Resource.extend({
+                parse: function () { throw new Error("ParseError"); }
+            });
+            var resource = new BadResource();
+            resource.fetch().done(function () {
+                should.fail;
+            }).fail(function (err) {
+                should.be.ok;
                 done();
             });
         });

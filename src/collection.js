@@ -91,6 +91,10 @@ Collection.prototype.parse = function (data) {
 Collection.prototype.defaultParse = function (data) {
     var self = this;
     if (data !== null) {
+        if (!Array.isArray(data)) {
+            throw new TypeError(
+                "Attempting to parse non-array into collection");
+        }
         data.forEach(function (datum) {
             self.add(new self.ProtoResource(datum));
         });

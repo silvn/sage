@@ -107,6 +107,17 @@ describe("Collection", function () {
                 done();
             });
         });
+        it("should fail when trying to parse non-array", function (done) {
+            var Cats = Collection.extend({
+                url: CAT_URL,
+                parse: function (data) { return { cats: data } }
+            });
+            var cats = new Cats();
+            cats.fetch().fail(function (err) {
+                err.should.be.instanceof(TypeError);
+                done();
+            });
+        });
         after(function (done) {
             server.close();
             done();
