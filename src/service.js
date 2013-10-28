@@ -48,13 +48,20 @@ function Service(properties) {
     self.isListening = false;
 }
 
+/**
+ * @method logLevel
+ * Sets the service log-level. Used for logging.
+ * 
+ * @static
+ * @private
+ */
 Service.logLevel = function (level) {
     this._logLevel = level;
     return this;
 }
 
 /**
- * @method
+ * @method extend
  * Extends the service.
  * 
  * @param {Object} args Arguments with which to extend
