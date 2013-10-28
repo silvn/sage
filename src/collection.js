@@ -84,10 +84,21 @@ Collection.prototype.remove = function (resource) {
  * @inheritdoc Resource#parse
  */
 Collection.prototype.parse = function (data) {
+    return data;
+}
+
+/** @ignore */
+Collection.prototype.defaultParse = function (data) {
     var self = this;
-    data.forEach(function (datum) {
-        self.add(new self.ProtoResource(datum));
-    });
+    if (data !== null) {
+        if (!Array.isArray(data)) {
+            throw new TypeError(
+                "Attempting to parse non-array into collection");
+        }
+        data.forEach(function (datum) {
+            self.add(new self.ProtoResource(datum));
+        });
+    }
     return data;
 }
 

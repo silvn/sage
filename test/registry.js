@@ -3,8 +3,8 @@ var express   = require("express");
 var util      = require("util");
 var async     = require("async");
 
+var Service   = require("../src/service").logLevel("fatal");
 var Registry   = require("../src/registry");
-var Service   = require("../src/service");
 Registry.listen(34567);
 
 var URL = "http://0.0.0.0:34567"

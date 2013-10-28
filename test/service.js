@@ -3,7 +3,7 @@ var express   = require("express");
 var util      = require("util");
 var async     = require("async");
 
-var Service   = require("../src/service");
+var Service   = require("../src/service").logLevel("fatal");
 var Resource  = require("../src/resource");
 
 function testMethod(method, done, expectBody) {
