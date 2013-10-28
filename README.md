@@ -72,12 +72,13 @@ TODO
 ####v0.0.9
 
 * Better logging facility.
+* Resource classes parse fetched objects even when `parse` routine is defined.
 * Improved error handling.
 
 ####v0.0.8
 
-* [NEW] Resource collections. (Closes #5)
-* [NEW] Resources and collections can be fetched from remote services and parsed. (Closes #6)
+* [NEW] Resource collections. (Closes GH-5)
+* [NEW] Resources and collections can be fetched from remote services and parsed. (Closes GH-6)
 
 ####v0.0.7
 
