@@ -32,4 +32,14 @@ describe("extend", function () {
         a.value.should.equal("blue");
         b.value.should.equal("green");
     });
+    it("should allow extending of the extended class", function () {
+        function A() {};
+        A.prototype.x = function () {};
+        var B = extend.call(A, { y: function () {} });
+        var C = extend.call(B, { z: function () {} });
+        var c = new C();
+        c.z.should.be.a.Function;
+        c.y.should.be.a.Function;
+        c.x.should.be.a.Function;
+    });
 });

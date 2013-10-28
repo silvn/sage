@@ -1,4 +1,5 @@
 var Resource = require("./resource");
+var extend   = require("./extend");
 
 /**
  * @class Collection
@@ -10,19 +11,36 @@ var Resource = require("./resource");
  *     cats.add(new Resource());
  *     cats.fetch().done(function () { ... });
  * 
+ * A collection acts as a pseudo-{link Array}, exposing Array API (while not having
+ * an {link Array} prototype, for [very obscure reasons][1].)
+ * 
+ * [1]: http://perfectionkills.com/how-ecmascript-5-still-does-not-allow-to-subclass-an-array/
  * @extends Resource
  * @constructor
  */
 var Collection = Resource.extend({
     constructor: function (params) {
-        Resource.call(this, params); // super() constructor
         params = (params || {});
-        this.items = [];
+        Resource.call(this, params); // super() constructor
         this.ProtoResource = Resource;
         if (params.resource !== undefined) {
             this.ProtoResource = params.resource;
         }
+        // Hack to get this to start behaving like an Array
+        this.push({}); this.pop();
+        return this;
     }
+});
+
+[
+    "join", "reverse", "sort", "push", "pop", "shift", "unshift",
+    "splice", "concat", "slice", "indexOf", "lastIndexOf",
+    "forEach", "map", "reduce", "reduceRight", "filter",
+    "some", "every", "isArray"
+].forEach(function (fn) {
+    Collection.prototype[fn] = function () {
+        return Array.prototype[fn].apply(this, arguments);
+    };
 });
 
 /**
@@ -38,7 +56,7 @@ Collection.prototype.add = function (resource) {
             this.ProtoResource
         );
     }
-    this.items.push(resource);
+    this.push(resource);
     return this;
 }
 
@@ -49,7 +67,7 @@ Collection.prototype.add = function (resource) {
  * @return {Resource}
  */
 Collection.prototype.get = function (index) {
-    return this.items[index];
+    return this[index];
 }
 
 /**
@@ -58,7 +76,7 @@ Collection.prototype.get = function (index) {
  * @return {Number}
  */
 Collection.prototype.size = function () {
-    return this.items.length;
+    return this.length;
 };
 
 /**
@@ -69,9 +87,9 @@ Collection.prototype.size = function () {
  * @throws {Error}
  */
 Collection.prototype.remove = function (resource) {
-    for (var i = 0; i < this.items.length; i++) {
-        if (this.items[i] == resource) {
-            var removed = this.items.splice(i, 1);
+    for (var i = 0; i < this.length; i++) {
+        if (this[i] == resource) {
+            var removed = this.splice(i, 1);
             return removed[0];
         }
     }
