@@ -16,6 +16,11 @@ function Service(properties) {
     this.props = (properties || {});
     this.restify = restify.createServer();
     this.restify.use(restify.bodyParser());
+    this.restify.on("uncaughtException", function (req, res, route, e) {
+        console.trace(e);
+        res.send(new InternalError(e, e.message || 'unexpected error'));
+        return true;
+    });
     this.resMap = {};
     this.entities = {};
     this.isListening = false;

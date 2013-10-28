@@ -155,8 +155,9 @@ function _start_services {
             local port=${service[0]}
             local name=${service[1]}
             local controller=${service[2]}
-            local log=$LOGDIR/$name.log
-            rm -f "$log"
+            local outlog=$LOGDIR/$name.out
+            local errlog=$LOGDIR/$name.err
+            rm -f "$outlog" "$errlog"
             local pidfile=`_svc_pidfile $name`
             local pid=`_running_pid $pidfile`
             if [ $name == "registry" ]; then
@@ -168,7 +169,7 @@ function _start_services {
                     --port    $port \
                     --service $controller \
                     --name    $name \
-                    --log     "$log" &
+                    --log     "$outlog" 2> "$errlog" &
                 echo $! > $pidfile
             fi
         done

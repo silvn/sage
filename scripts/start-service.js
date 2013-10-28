@@ -27,10 +27,13 @@ function absolutePath(filename) {
 
 var serviceName = argv.name;
 if (argv.log) {
-    var log = fs.createWriteStream(argv.log);
-    console.log = console.err = function () {
-        log.write(util.format.apply(null, arguments) + "\n");
-    };
+    var out = fs.createWriteStream(argv.log);
+    process.__defineGetter__('stdout', function () {
+        return out;
+    });
+    process.__defineGetter__('stderr', function () {
+        return out;
+    });
 }
 
 var service = require(argv.service);
