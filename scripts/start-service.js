@@ -9,7 +9,8 @@ var optimist = require('optimist')
     .describe("name",     "The service name")
     .describe("service",  "The service file")
     .describe("port",     "The network port")
-    .describe("log",      "File to log output")
+    .describe("out",      "File to log standard output")
+    .describe("err",      "File to log errors")
     .describe("registry", "A registry with which to register the service");
 var argv = optimist.argv;
 
@@ -26,16 +27,20 @@ function absolutePath(filename) {
 }
 
 var serviceName = argv.name;
-if (argv.log) {
-    var out = fs.createWriteStream(argv.log);
+if (argv.out) {
+    var out = fs.createWriteStream(argv.out);
     process.__defineGetter__('stdout', function () {
         return out;
     });
+}
+if (argv.err) {
+    var err = fs.createWriteStream(argv.err);
     process.__defineGetter__('stderr', function () {
-        return out;
+        return err;
     });
 }
 
 var service = require(argv.service);
+service.property("name", argv.name);
 service.start({ port: argv.port });
 console.log("[service %s %s]", argv.name, service.url());

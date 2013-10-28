@@ -1,6 +1,7 @@
 var restify = require("restify");
 var Q       = require("q");
 var _       = require("underscore");
+var bunyan  = require("bunyan");
 
 /**
  * @class Service
@@ -13,17 +14,26 @@ var _       = require("underscore");
  *                 used to describe the service within the {@link Registry}.
  */
 function Service(properties) {
-    this.props = (properties || {});
-    this.restify = restify.createServer();
-    this.restify.use(restify.bodyParser());
-    this.restify.on("uncaughtException", function (req, res, route, e) {
-        console.trace(e);
-        res.send(new InternalError(e, e.message || 'unexpected error'));
-        return true;
+    var self = this;
+    self.props = (properties || {});
+    self.restify = restify.createServer();
+    self.restify.use(restify.bodyParser());
+    self.logger = bunyan.createLogger({
+        name: "service",
+        stream: process.stdout
     });
-    this.resMap = {};
-    this.entities = {};
-    this.isListening = false;
+    self.restify.on("uncaughtException", function (req, res, route, e) {
+        restify.auditLogger({ log: self.logger }).apply(null, arguments);
+        console.error("Uncaught exception!\n", e.stack);
+        res.send(new restify.InternalError(e, e.message || 'unexpected error'));
+        return (true);
+    });
+    self.restify.on('after', restify.auditLogger({
+        log: self.logger
+    }));
+    self.resMap = {};
+    self.entities = {};
+    self.isListening = false;
 }
 
 /**
