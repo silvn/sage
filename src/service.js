@@ -27,6 +27,8 @@ function Service(properties) {
             res: bunyan.stdSerializers.res
         }
     });
+    if (Service._logLevel !== undefined)
+        self.logger.level(Service._logLevel);
     self.restify = restify.createServer({ log: self.logger });
     self.restify.use(restify.bodyParser());
     self.restify.pre(function (req, res, next) {
@@ -44,6 +46,11 @@ function Service(properties) {
     self.resMap = {};
     self.entities = {};
     self.isListening = false;
+}
+
+Service.logLevel = function (level) {
+    this._logLevel = level;
+    return this;
 }
 
 /**
