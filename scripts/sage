@@ -1,5 +1,6 @@
 #!/bin/bash
 
+MONITOR=${MONITOR:-node}
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 SAGEDIR=${SAGEDIR:-`cd $SCRIPTDIR/.. && pwd -P`}
 BASEDIR=$PWD
@@ -155,8 +156,9 @@ function _start_services {
             local port=${service[0]}
             local name=${service[1]}
             local controller=${service[2]}
-            local log=$LOGDIR/$name.log
-            rm -f "$log"
+            local outlog=$LOGDIR/$name.out
+            local errlog=$LOGDIR/$name.err
+            rm -f "$outlog" "$errlog"
             local pidfile=`_svc_pidfile $name`
             local pid=`_running_pid $pidfile`
             if [ $name == "registry" ]; then
@@ -164,11 +166,12 @@ function _start_services {
             fi
             if [ $controller != "undefined" ]; then
                 controller=`_abspath $controller`
-                node $SAGEDIR/scripts/start-service.js \
+                $MONITOR $SAGEDIR/scripts/start-service.js \
                     --port    $port \
                     --service $controller \
                     --name    $name \
-                    --log     "$log" &
+                    --out     "$outlog" \
+                    --err     "$errlog" 2> "$errlog" &
                 echo $! > $pidfile
             fi
         done

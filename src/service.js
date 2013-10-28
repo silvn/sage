@@ -1,6 +1,7 @@
 var restify = require("restify");
 var Q       = require("q");
 var _       = require("underscore");
+var bunyan  = require("bunyan");
 
 /**
  * @class Service
@@ -13,12 +14,36 @@ var _       = require("underscore");
  *                 used to describe the service within the {@link Registry}.
  */
 function Service(properties) {
-    this.props = (properties || {});
-    this.restify = restify.createServer();
-    this.restify.use(restify.bodyParser());
-    this.resMap = {};
-    this.entities = {};
-    this.isListening = false;
+    var self = this;
+    self.props = (properties || {});
+    self.logger = bunyan.createLogger({
+        name: "service",
+        streams: [
+            { level: "info",  stream: process.stdout },
+            { level: "error", stream: process.stderr }
+        ],
+        serializers: {
+            req: bunyan.stdSerializers.req,
+            res: bunyan.stdSerializers.res
+        }
+    });
+    self.restify = restify.createServer({ log: self.logger });
+    self.restify.use(restify.bodyParser());
+    self.restify.pre(function (req, res, next) {
+        req.log.info({req: req}, "start");
+        return next();
+    });
+    self.restify.on('after', function (req, res, route, e) {
+        req.log.info({res: res}, "finish");
+    });
+    self.restify.on("uncaughtException", function (req, res, route, e) {
+        res.send(new restify.InternalError(e, e.message || 'unexpected error'));
+        req.log.error(e.stack, "finish");
+        return (true);
+    });
+    self.resMap = {};
+    self.entities = {};
+    self.isListening = false;
 }
 
 /**
