@@ -3,6 +3,8 @@ var Q       = require("q");
 var _       = require("underscore");
 var bunyan  = require("bunyan");
 
+var Collection = require("./collection");
+
 /**
  * @class Service
  *
@@ -160,23 +162,26 @@ function ensureDefaultRoutes(service) {
     });
     service.post("/:resource", function (req, res, next) {
         var key = req.params.resource;
-        var list = service.entities[key];
-        if (list === undefined) {
+        var collection = service.entities[key];
+        if (collection === undefined) {
             return next(new Service.ResourceNotFoundError(
                 "Cannot create an undefined resource"
             ));
         }
-        var id = list.identifier++;
-        list.items[id] = req.body;
+        var id = collection.identifier++;
+        req.body.id = id;
+        var resource = collection.add(req.body);
         res.send({ id: id });
     });
     service.get("/:resource/list", function (req, res, next) {
         var url = service.url();
         var key = req.params.resource;
-        var entities = service.entities[key];
-        res.send(Object.keys(entities.items).map(function (id) {
-            return [url, key, id].join("/");
-        }));
+        var collection = service.entities[key];
+        collection.fetch().done(function () {
+            res.send(this.map(function (resource) {
+                return [url, key, resource.property("id")].join("/");
+            }));
+        });
     });
 }
 
@@ -282,7 +287,12 @@ Service.prototype.url = function () {
 Service.prototype.resource = function (key, resource) {
     if (resource !== undefined) {
         this.resMap[key] = resource;
-        this.entities[key] = { identifier: 1, items: {} };
+        var isCollection = typeof(resource) === "function" &&
+            (new resource) instanceof Collection;
+        var ProtoCollection = isCollection ?
+            resource : Collection.extend({ resource: resource });
+        this.entities[key] = new ProtoCollection();
+        this.entities[key].identifier = 1;
         setResourceRoutes(this, key);
     }
     return this.resMap[key];

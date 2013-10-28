@@ -40,7 +40,6 @@ var RES_OPTIONS = ["url", "parse"];
  * @param {Object} properties A set of initial properties
  */
 function Resource(properties) {
-    this.props = {};
     for (var name in properties) {
         if (properties.hasOwnProperty(name)) {
             this.property(name, properties[name]);
@@ -111,6 +110,7 @@ Resource.schema = function () { return {}; };
  * See {@link Resource#extend}
  */
 Resource.prototype.property = function (prop, value) {
+    this.props = (this.props || {});
     if (value !== undefined) {
         var schema = this.schema();
         if (schema[prop] !== undefined) {

@@ -23,17 +23,25 @@ describe("Collection", function () {
         var removed = collection.remove(resource);
         collection.size().should.equal(2);
     });
+    it("should act like an Array", function () {
+        collection.length.should.equal(2);
+        collection[0].should.eql(resource);
+    });
     it("should throw when trying to remove non-member", function () {
         (function () { collection.remove(new Resource()); }).should.throw();
     });
     it("should accept a resource as a constructor argument", function () {
-        var Color = Resource.extend({
-            name: { type: "string" }
-        });
+        var Color = Resource.extend({ name: { type: "string" } });
         var collection = new Collection({ resource: Color });
         collection.add(new Color()).should.be.ok;
-        collection.size().should.equal(1);
+        collection.length.should.equal(1);
         (function () { collection.add(new Resource()); }).should.throw();
+    });
+    it("should allow adding plain-old objects as resources", function () {
+        var Color = Resource.extend({ name: { type: "string" } });
+        var collection = new Collection({ resource: Color });
+        collection.add({ name: "blue" }).should.be.ok;
+        collection.length.should.equal(1);
     });
     it("should set and get properties", function () {
         collection.property("foo", "bar").should.be.ok;
@@ -54,7 +62,7 @@ describe("Collection", function () {
             var Cats = Collection.extend({ url: CAT_URL });
             var cats = new Cats();
             cats.fetch().done(function () {
-                this.size().should.equal(2);
+                this.length.should.equal(2);
                 var cat1 = this.get(0);
                 var cat2 = this.get(1);
                 cat1.property("name").should.equal("Felix");
@@ -105,6 +113,8 @@ describe("Collection", function () {
                 this.size().should.equal(0);
                 parseOverridden.should.be.true;
                 done();
+            }).fail(function (e) {
+                console.log(e);
             });
         });
         it("should fail when trying to parse non-array", function (done) {
