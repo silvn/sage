@@ -1,4 +1,4 @@
-var Service = require(__dirname + "/service.js").logLevel("fatal");
+var Service = require(__dirname + "/service.js");
 
 /**
  * @class Registry
