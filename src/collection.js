@@ -50,11 +50,15 @@ var Collection = Resource.extend({
  * @chainable
  */
 Collection.prototype.add = function (resource) {
-    if (!(resource instanceof this.ProtoResource)) {
-        throw new Error(
-            "Collection can only contain resources of type " +
-            this.ProtoResource
-        );
+    if (resource instanceof Resource) {
+        if (!(resource instanceof this.ProtoResource)) {
+            throw new Error(
+                "Collection can only contain resources of type " +
+                this.ProtoResource
+            );
+        }
+    } else { // POJO
+        resource = new this.ProtoResource(resource);
     }
     this.push(resource);
     return this;

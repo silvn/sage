@@ -1,10 +1,11 @@
-var supertest = require("supertest");
-var express   = require("express");
-var util      = require("util");
-var async     = require("async");
+var supertest  = require("supertest");
+var express    = require("express");
+var util       = require("util");
+var async      = require("async");
 
-var Service   = require("../src/service").logLevel("fatal");
-var Resource  = require("../src/resource");
+var Service    = require("../src/service").logLevel("fatal");
+var Resource   = require("../src/resource");
+var Collection = require("../src/collection");
 
 function testMethod(method, done, expectBody) {
     var service = new Service();
@@ -244,7 +245,35 @@ describe("Resource API", function () {
                 done();
             });
         });
-    })
+    });
+    it("should fetch a list from a collection", function (done) {
+        var app = express();
+        var http = require("http");
+        app.get("/", function (req, res) {
+            res.send(200, [
+                { id: "cat0001" },
+                { id: "cat0002" },
+                { id: "cat0003" },
+                { id: "cat0004" },
+                { id: "cat0005" }
+            ]);
+        });
+        var server = http.createServer(app).listen(56565);
+        var LIST_URL = "http://0.0.0.0:56565";
+        var Cats = Collection.extend({ url: LIST_URL });
+        service.resource("cat", Cats);
+        request.get("/cat/list").expect(200).end(function (err, res) {
+            [err].should.be.null;
+            res.body.should.eql([
+                URL + "/cat/cat0001",
+                URL + "/cat/cat0002",
+                URL + "/cat/cat0003",
+                URL + "/cat/cat0004",
+                URL + "/cat/cat0005"
+            ]);
+            done();
+        })
+    });
 });
 
 describe("Service.get", function () {

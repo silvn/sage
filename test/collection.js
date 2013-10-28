@@ -37,6 +37,12 @@ describe("Collection", function () {
         collection.length.should.equal(1);
         (function () { collection.add(new Resource()); }).should.throw();
     });
+    it("should allow adding plain-old objects as resources", function () {
+        var Color = Resource.extend({ name: { type: "string" } });
+        var collection = new Collection({ resource: Color });
+        collection.add({ name: "blue" }).should.be.ok;
+        collection.length.should.equal(1);
+    });
     it("should set and get properties", function () {
         collection.property("foo", "bar").should.be.ok;
         collection.property("foo").should.equal("bar");
