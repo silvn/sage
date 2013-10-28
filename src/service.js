@@ -16,21 +16,31 @@ var bunyan  = require("bunyan");
 function Service(properties) {
     var self = this;
     self.props = (properties || {});
-    self.restify = restify.createServer();
-    self.restify.use(restify.bodyParser());
     self.logger = bunyan.createLogger({
         name: "service",
-        stream: process.stdout
+        streams: [
+            { level: "info",  stream: process.stdout },
+            { level: "error", stream: process.stderr }
+        ],
+        serializers: {
+            req: bunyan.stdSerializers.req,
+            res: bunyan.stdSerializers.res
+        }
+    });
+    self.restify = restify.createServer({ log: self.logger });
+    self.restify.use(restify.bodyParser());
+    self.restify.pre(function (req, res, next) {
+        req.log.info({req: req}, "start");
+        return next();
+    });
+    self.restify.on('after', function (req, res, route, e) {
+        req.log.info({res: res}, "finish");
     });
     self.restify.on("uncaughtException", function (req, res, route, e) {
-        restify.auditLogger({ log: self.logger }).apply(null, arguments);
-        console.error("Uncaught exception!\n", e.stack);
         res.send(new restify.InternalError(e, e.message || 'unexpected error'));
+        req.log.error(e.stack, "finish");
         return (true);
     });
-    self.restify.on('after', restify.auditLogger({
-        log: self.logger
-    }));
     self.resMap = {};
     self.entities = {};
     self.isListening = false;
