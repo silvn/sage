@@ -61,6 +61,10 @@ function Service(properties) {
 
 Service.prototype.initialize = function () {};
 
+Service.prototype.registryURL = function (value) {
+    this._registryURL = value;
+};
+
 /**
  * @method logLevel
  * Sets the service log-level. Used for logging.
@@ -400,7 +404,9 @@ Service.prototype.listening = function () {
 Service.prototype.registry = function () {
     var Registry = require("./registry");
     if (this._registryURL === undefined) {
-        return Registry;
+        var promise = new Promise();
+        promise.resolve(Registry);
+        return promise;
     } else {
         return Registry.proxy(this._registryURL);
     }
