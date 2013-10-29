@@ -46,6 +46,6 @@ service.start({ port: argv.port }).done(function () {
     // Log service as started
     console.log(JSON.stringify({
         service: { name: argv.name, url: service.url() }
-    }));    
+    }));
 });
 
