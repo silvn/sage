@@ -5,9 +5,8 @@ var async     = require("async");
 
 var Service   = require("../src/service").logLevel("fatal");
 var Registry   = require("../src/registry");
-Registry.listen(34567);
 
-var URL = "http://0.0.0.0:34567"
+var URL = "http://0.0.0.0:34567";
 
 function testRoute(route, body, done) {
     supertest(Registry).get(route).end(function (err, res) {
@@ -23,7 +22,11 @@ function testRoute(route, body, done) {
 
 describe("registry", function () {
     beforeEach(function () {
+        Registry.start({ port: 34567 });
         Registry.reset();
+    });
+    afterEach(function (done) {
+        Registry.stop().done(done);
     });
     it("should be a valid object", function () {
         Registry.should.be.an.Object;
@@ -123,23 +126,38 @@ describe("registry", function () {
             done();
         });
     });
-    function addFindServices() {
-        var svc1 = new Service({ name: "svc1", type: "car" });
-        svc1.listen(29991); Registry.add(svc1);
-        var svc2 = new Service({ name: "svc2", type: "social" });
-        svc2.listen(29992); Registry.add(svc2);
-        var svc3 = new Service({ name: "svc3", type: "car" });
-        svc3.listen(29993); Registry.add(svc3);
+    function addService(props, port) {
+        var svc = new Service(props);
+        svc.start({ port: port });
+        Registry.add(svc);
+        svc.stop();
+    }
+    function addServicesToFind() {
+        addService({ name: "svc1", type: "car"    }, 29991);
+        addService({ name: "svc2", type: "social" }, 29992);
+        addService({ name: "svc3", type: "car"    }, 29993);
     }
     describe("#find", function () {
         it("should return a service", function (done) {
-            addFindServices();
+            addServicesToFind(29991);
             var service = Registry.find("name", "svc1");
             service.should.be.an.Object;
             service.should.eql({
                 name: "svc1", type: "car", url: "http://0.0.0.0:29991"
             });
             done();
+        });
+    });
+    describe("#proxy", function () {
+        it("should clone functionality of real Registry", function (done) {
+            addServicesToFind(29995);
+            Registry.proxy(URL).done(function (registry) {
+                registry.should.not.equal(Registry);
+                registry.find("name", "svc2").should.eql({
+                    name: "svc2", type: "social", url: "http://0.0.0.0:29992"
+                });
+                done();
+            });
         });
     });
 });

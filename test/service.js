@@ -2,10 +2,12 @@ var supertest  = require("supertest");
 var express    = require("express");
 var util       = require("util");
 var async      = require("async");
+var spawn      = require("child_process").spawn;
 
 var Service    = require("../src/service").logLevel("fatal");
 var Resource   = require("../src/resource");
 var Collection = require("../src/collection");
+var Registry   = require("../src/registry");
 
 function testMethod(method, done, expectBody) {
     var service = new Service();
@@ -102,6 +104,26 @@ describe("Service", function () {
             res1: resource1,
             res2: resource2
         });
+    });
+    it("should be associated with a Registry", function (done) {
+        if (Registry.listening()) { Registry.stop(); }
+        Registry.listen(75757);
+        var other = new Service({ id: "deadbeef", city: "Chicago" });
+        other.listen(75758);
+        Registry.add(other);
+
+        var service = new Service({
+            initialize: function () {
+                this.registry().done(function (registry) {
+                    var service = registry.find("id", "deadbeef");
+                    service.city.should.equal("Chicago");
+                    Registry.stop();
+                    done();
+                });
+            },
+            registry: "http://0.0.0.0:75757"
+        });
+        service.listen(75759);
     });
 });
 
