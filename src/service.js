@@ -53,9 +53,17 @@ function Service(properties) {
         self.initialize = self.props.initialize;
         delete self.props["initialize"];
     }
+    if (self.props.hasOwnProperty("registry")) {
+        self._registryURL = self.props.registry;
+        delete self.props["registry"];
+    }
 }
 
 Service.prototype.initialize = function () {};
+
+Service.prototype.registryURL = function (value) {
+    this._registryURL = value;
+};
 
 /**
  * @method logLevel
@@ -391,6 +399,17 @@ Service.prototype.resources = function () {
  */
 Service.prototype.listening = function () {
     return this.isListening;
+};
+
+Service.prototype.registry = function () {
+    var Registry = require("./registry");
+    if (this._registryURL === undefined) {
+        var promise = new Promise();
+        promise.resolve(Registry);
+        return promise;
+    } else {
+        return Registry.proxy(this._registryURL);
+    }
 };
 
 DELEGATE_METHODS.forEach(function (method) {

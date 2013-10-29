@@ -42,6 +42,7 @@ if (argv.err) {
 
 var service = require(argv.service);
 service.property("name", argv.name);
+service.registryURL(argv.registry);
 service.start({ port: argv.port }).done(function () {
     // Log service as started
     console.log(JSON.stringify({

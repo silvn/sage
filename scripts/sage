@@ -149,6 +149,8 @@ function _start_services {
         services=$retvalue
     fi
 
+    local reg_svc=($(sage_cmd_services registry))
+    local reg_url="http://${reg_svc[3]}:${reg_svc[0]}"
     echo "Starting services..."
     echo "$services" | (while read line
         do
@@ -167,11 +169,12 @@ function _start_services {
             if [ $controller != "undefined" ]; then
                 controller=`_abspath $controller`
                 $MONITOR node $SAGEDIR/scripts/start-service.js \
-                    --port    $port \
-                    --service $controller \
-                    --name    $name \
-                    --out     "$outlog" \
-                    --err     "$errlog" 2> "$errlog" &
+                    --port     $port \
+                    --service  "$controller" \
+                    --name     "$name" \
+                    --out      "$outlog" \
+                    --err      "$errlog" \
+                    --registry "$reg_url" 2> "$errlog" &
                 echo $! > $pidfile
             fi
         done

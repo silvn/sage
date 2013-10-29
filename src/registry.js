@@ -1,4 +1,6 @@
-var Service = require(__dirname + "/service.js");
+var Service = require("./service");
+var Promise = require("./promise");
+var Restify = require("restify");
 
 /**
  * @class Registry
@@ -7,81 +9,98 @@ var Service = require(__dirname + "/service.js");
  * @extends Service
  * @singleton
  */
-var Registry = new Service();
-
-var services = {};
-var identifier = 1;
-
-Registry.get("/", function (req, res, next) {
-    var json = {};
-    for (var id in services) {
-        var service = services[id];
-        json[Registry.url() + "/service/" + id] = service;
+function createRegistry(params) {
+    var registry = new Service();
+    var services = {};
+    if (params !== undefined) {
+        services = params.services;
     }
-    res.send({ services: json });
-    next();
-});
+    var identifier = 1;
 
-Registry.get("/service/:id", function (req, res, next) {
-    var id = req.params.id;
-    var service = services[id];
-    if (service !== undefined) {
-        res.send(service);
-    } else {
-        next(new Service.ResourceNotFoundError(
-            "Service " + id + " is not registered"));
-    }
-});
-
-Registry.post("/service", function (req, res, next) {
-    var id, body = req.body;
-    try {
-        id = Registry.add(body);
-    } catch (err) {
-        return next(new Service.InvalidContentError(err.message));
-    }
-    res.send(200, {
-        message: "Service was added successfully",
-        id: id
+    registry.get("/", function (req, res, next) {
+        var json = {};
+        for (var id in services) {
+            var service = services[id];
+            json[registry.url() + "/service/" + id] = service;
+        }
+        res.send({ services: json });
+        next();
     });
-});
 
-Registry.add = function (service) {
-    var id, props;
-    if (service instanceof Service) {
-        if (service.listening() === false) {
-            throw new Error("Service is not listening");
-        }
-        id = service.property("id");
-        props = service.properties();
-        props.url = service.url();
-    } else {
-        if (service.url === undefined) {
-            throw new Error("URL property is not defined");
-        }
-        id = service.id;
-        props = service;
-    }
-    if (id === undefined) {
-        id = identifier++;
-    }
-    services[id] = props;
-    return id;
-};
-
-Registry.find = function (key, value) {
-    for (var id in services) {
+    registry.get("/service/:id", function (req, res, next) {
+        var id = req.params.id;
         var service = services[id];
-        if (service[key] == value) {
-            return service;
+        if (service !== undefined) {
+            res.send(service);
+        } else {
+            next(new Service.ResourceNotFoundError(
+                "Service " + id + " is not registered"));
         }
-    }
-    return null;
-};
+    });
 
-Registry.reset = function () {
-    services = {};
-    identifier = 1;
-};
+    registry.post("/service", function (req, res, next) {
+        var id, body = req.body;
+        try {
+            id = registry.add(body);
+        } catch (err) {
+            return next(new Service.InvalidContentError(err.message));
+        }
+        res.send(200, {
+            message: "Service was added successfully",
+            id: id
+        });
+    });
+
+    registry.add = function (service) {
+        var id, props;
+        if (service instanceof Service) {
+            if (service.listening() === false) {
+                throw new Error("Service is not listening");
+            }
+            id = service.property("id");
+            props = service.properties();
+            props.url = service.url();
+        } else {
+            if (service.url === undefined) {
+                throw new Error("URL property is not defined");
+            }
+            id = service.id;
+            props = service;
+        }
+        if (id === undefined) {
+            id = identifier++;
+        }
+        services[id] = props;
+        return id;
+    };
+
+    registry.find = function (key, value) {
+        for (var id in services) {
+            var service = services[id];
+            if (service[key] == value) {
+                return service;
+            }
+        }
+        return null;
+    };
+
+    registry.reset = function () {
+        services = {};
+        identifier = 1;
+    };
+    return registry;
+}
+
+var Registry = createRegistry();
+
+Registry.proxy = function (url) {
+    var client = Restify.createJsonClient({ url: url });
+    var promise = new Promise();
+    client.get("/", function (err, req, res, obj) {
+        var proxy = createRegistry(obj);
+        promise.resolve(proxy);
+    });
+    return promise;
+}        
 
 module.exports = Registry;
