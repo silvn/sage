@@ -48,7 +48,13 @@ function Service(properties) {
     self.resMap = {};
     self.collections = {};
     self.isListening = false;
+    if (self.props.hasOwnProperty("initialize")) {
+        self.initialize = self.props.initialize;
+        delete self.props["initialize"];
+    }
 }
+
+Service.prototype.initialize = function () {};
 
 /**
  * @method logLevel
@@ -302,6 +308,7 @@ Service.prototype.stop = function () {
  * @chainable
  */
 Service.prototype.listen = function () {
+    this.initialize();
     ensureDefaultRoutes(this);
     this.isListening = true;
     return this.restify.listen.apply(this.restify, arguments);

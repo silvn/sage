@@ -56,18 +56,33 @@ describe("Service", function () {
             done();
         });
     });
-    it("should allow user properties in constructor", function () {
-        var service = new Service({ name: "namedService" });
-        service.property("name").should.equal("namedService");
-    });
-    it("should allow properties to be defined a la carte", function () {
-        var service = new Service();
-        service.property("prop1", "propValue");
-        service.property("prop1").should.equal("propValue");
-    });
-    it("should return all properties", function () {
-        var service = new Service({ p1: "v1", p2: "v2" });
-        service.properties().should.eql({ p1: "v1", p2: "v2" });
+    describe("#constructor", function () {
+        it("should allow user properties", function () {
+            var service = new Service({ name: "namedService" });
+            service.property("name").should.equal("namedService");
+        });
+        it("should allow properties to be defined a la carte", function () {
+            var service = new Service();
+            service.property("prop1", "propValue");
+            service.property("prop1").should.equal("propValue");
+        });
+        it("should return all properties", function () {
+            var service = new Service({ p1: "v1", p2: "v2" });
+            service.properties().should.eql({ p1: "v1", p2: "v2" });
+        });
+        it("should accept a special initialize function", function () {
+            initialized = false;
+            var service = new Service({
+                initialize: function () {
+                    initialized = true;
+                }
+            });
+            initialized.should.be.false;
+            service.start({ port: 12345 });
+            initialized.should.be.true;
+            [service.property("initialize")].should.be.null;
+            service.stop();
+        });
     });
     it("should expose REST error classes", function () {
         Service.ResourceNotFoundError.should.be.a.Function;
