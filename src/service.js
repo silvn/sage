@@ -37,7 +37,7 @@ function Service(properties) {
         req.log.info({req: req}, "start");
         return next();
     });
-    self.restify.on('after', function (req, res, route, e) {
+    self.restify.on("after", function (req, res, route, e) {
         req.log.info({res: res}, "finish");
     });
     self.restify.on("uncaughtException", function (req, res, route, e) {

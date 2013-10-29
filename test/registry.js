@@ -39,7 +39,6 @@ describe("registry", function () {
         testRoute("/", { services: {} }, done);
     });
     it("should register a service", function (done) {
-        Registry.add.should.be.a.Function;
         var service = new Service({ id: 5, name: "service1" });
         service.listen(5555);
         Registry.add(service);
@@ -124,7 +123,27 @@ describe("registry", function () {
             done();
         });
     });
+    function addFindServices() {
+        var svc1 = new Service({ name: "svc1", type: "car" });
+        svc1.listen(29991); Registry.add(svc1);
+        var svc2 = new Service({ name: "svc2", type: "social" });
+        svc2.listen(29992); Registry.add(svc2);
+        var svc3 = new Service({ name: "svc3", type: "car" });
+        svc3.listen(29993); Registry.add(svc3);
+    }
+    describe("#find", function () {
+        it("should return a service", function (done) {
+            addFindServices();
+            var service = Registry.find("name", "svc1");
+            service.should.be.an.Object;
+            service.should.eql({
+                name: "svc1", type: "car", url: "http://0.0.0.0:29991"
+            });
+            done();
+        });
+    });
 });
+
 
 describe("Registered service", function () {
     beforeEach(function () {

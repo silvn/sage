@@ -69,6 +69,16 @@ Registry.add = function (service) {
     return id;
 };
 
+Registry.find = function (key, value) {
+    for (var id in services) {
+        var service = services[id];
+        if (service[key] == value) {
+            return service;
+        }
+    }
+    return null;
+};
+
 Registry.reset = function () {
     services = {};
     identifier = 1;
