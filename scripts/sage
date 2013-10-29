@@ -1,6 +1,6 @@
 #!/bin/bash
 
-MONITOR=${MONITOR:-node}
+MONITOR=${MONITOR:-""}
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 SAGEDIR=${SAGEDIR:-`cd $SCRIPTDIR/.. && pwd -P`}
 BASEDIR=$PWD
@@ -166,7 +166,7 @@ function _start_services {
             fi
             if [ $controller != "undefined" ]; then
                 controller=`_abspath $controller`
-                $MONITOR $SAGEDIR/scripts/start-service.js \
+                $MONITOR node $SAGEDIR/scripts/start-service.js \
                     --port    $port \
                     --service $controller \
                     --name    $name \
@@ -179,34 +179,7 @@ function _start_services {
     ) &
     sleep 1
     sagepid=$!
-    register_services $svc
-}
-
-function register_services {
-    local svc=$1
-    local services=$(sage_cmd_services $svc)
-    local reg_svc=($(sage_cmd_services registry))
-    local reg_url="http://${reg_svc[3]}:${reg_svc[0]}"
-    echo "$services" | (while read line
-        do
-            local service=($line)
-            local port=${service[0]}
-            local name=${service[1]}
-            local host=${service[3]}
-            if [ "$name" == "registry" ]; then
-                continue;
-            fi
-            url="http://$host:$port"
-            define payload <<EOJSON
-{ "name" : "$name", "port": "$port", "host": "$host", "url": "$url" }
-EOJSON
-            local response=$(curl -is -H "Content-type: application/json" \
-                -X POST -d "$payload" "$reg_url/service")
-            if [ $(grep -c '200 OK' <<< "$response") -eq 0 ]; then
-                _error "Could not register service $name:\n$response"
-            fi
-        done
-    )
+    $MONITOR $0 register $svc
 }
 
 function _start_all_sage {
@@ -576,6 +549,40 @@ $registry_port registry undefined $hostname"
         fi
         printf "$outfmt" ${svc[@]}
     done
+}
+
+# ---------------------------------------------------------------------------
+# SAGE REGISTER
+# ---------------------------------------------------------------------------
+_help_start="sage register [<service>]
+
+Registers services. With no arguments, registers all services.
+    <service>   Register a specific service"
+function sage_cmd_register {
+    local svc=$1
+    local services=$(sage_cmd_services $svc)
+    local reg_svc=($(sage_cmd_services registry))
+    local reg_url="http://${reg_svc[3]}:${reg_svc[0]}"
+    echo "$services" | (while read line
+        do
+            local service=($line)
+            local port=${service[0]}
+            local name=${service[1]}
+            local host=${service[3]}
+            if [ "$name" == "registry" ]; then
+                continue;
+            fi
+            url="http://$host:$port"
+            define payload <<EOJSON
+{ "name" : "$name", "port": "$port", "host": "$host", "url": "$url" }
+EOJSON
+            local response=$(curl -is -H "Content-type: application/json" \
+                -X POST -d "$payload" "$reg_url/service")
+            if [ $(grep -c '200 OK' <<< "$response") -eq 0 ]; then
+                _error "Could not register service $name: $response"
+            fi
+        done
+    )
 }
 
 # ---------------------------------------------------------------------------

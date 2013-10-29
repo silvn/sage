@@ -42,7 +42,10 @@ if (argv.err) {
 
 var service = require(argv.service);
 service.property("name", argv.name);
-service.start({ port: argv.port });
-console.log(JSON.stringify({
-    service: { name: argv.name, url: service.url()
-}}));
+service.start({ port: argv.port }).done(function () {
+    // Log service as started
+    console.log(JSON.stringify({
+        service: { name: argv.name, url: service.url() }
+    }));
+});
+

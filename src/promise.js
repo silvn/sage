@@ -30,6 +30,16 @@
  */
 function Promise(context) {
     this.resolved = false;
+    this.doneCallbacks = [];
+    this.failCallbacks = [];
+    
+    this.runCallbacks = function (callbacks) {
+        var args = this.args;
+        callbacks.forEach(function (cb) {
+            cb.apply(context, args);
+        });
+    };
+    
     
     /**
      * @method done
@@ -39,10 +49,11 @@ function Promise(context) {
      * @chainable
      */
     this.done = function (callback) {
+        var self = this;
         if (this.resolved) {
-            callback.apply(context, this.args);
+            callback.apply(context, self.args);
         } else {
-            this.doneCallback = callback;
+            this.doneCallbacks.push(callback);
         }
         return this;
     };
@@ -58,7 +69,7 @@ function Promise(context) {
         if (this.resolved) {
             callback.apply(context, this.args);
         } else {
-            this.failCallback = callback;
+            this.failCallbacks.push(callback);
         }
         return this;
     };
@@ -71,11 +82,8 @@ function Promise(context) {
      */
     this.resolve = function () {
         this.resolved = true;
-        if (this.doneCallback !== undefined) {
-            this.doneCallback.apply(context, arguments);
-        } else {
-            this.args = Array.prototype.slice.call(arguments, 0);
-        }
+        this.args = Array.prototype.slice.call(arguments, 0);
+        this.runCallbacks(this.doneCallbacks);
         return this;
     };
     
@@ -87,11 +95,8 @@ function Promise(context) {
      */
     this.resolveFail = function () {
         this.resolved = true;
-        if (this.failCallback !== undefined) {
-            this.failCallback.apply(context, arguments);
-        } else {
-            this.args = Array.prototype.slice.call(arguments, 0);
-        }
+        this.args = Array.prototype.slice.call(arguments, 0);
+        this.runCallbacks(this.failCallbacks);
         return this;
     };
     return this;

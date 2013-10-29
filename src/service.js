@@ -4,6 +4,7 @@ var _       = require("underscore");
 var bunyan  = require("bunyan");
 
 var Collection = require("./collection");
+var Promise    = require("./promise");
 
 /**
  * @class Service
@@ -267,37 +268,39 @@ function fetchCollection(service, key, callback) {
  * @chainable
  */
 Service.prototype.start = function (params) {
+    var self = this;
     params = params || {};
     if (params.port === undefined) {
         throw new Error("port is a required parameter");
     }
-    if (this.restify.address() !== null) {
-        throw new Error("service already running at " + this.restify.address());
+    if (self.restify.address() !== null) {
+        throw new Error("service already running at " + self.restify.address());
     }
-    var deferred = Q.defer();
-    this.listen(params.port, function () {
-        deferred.resolve(true);
+    self.startedPromise = new Promise(self);
+    self.listen(params.port, function () {
+        self.startedPromise.resolve(true);
     });
-    this.startedPromise = deferred.promise;
-    return this;
+    return self.startedPromise;
 };
 
 /**
  * @method
  * Stops the service.
  * 
- * @chainable
+ * @return {Promise}
  */
 Service.prototype.stop = function () {
     var self = this;
+    var stopPromise = new Promise(self);
     if (this.startedPromise === null) {
         throw new Error("service has not started");
     }
     this.startedPromise.done(function () {
         self.restify.close();
+        stopPromise.resolve();
     });
     self.isListening = false;
-    return this;
+    return stopPromise;
 };
 
 /**

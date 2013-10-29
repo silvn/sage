@@ -134,6 +134,12 @@ describe("Service.start()", function () {
         lService.stop();
         lService.listening().should.be.false;
     });
+    it("should return a promise", function (done) {
+        service.start({ port: 7000 }).done(function () {
+            this.stop();
+            done();
+        });
+    });
 });
 
 describe("Service.stop()", function () {
@@ -144,6 +150,12 @@ describe("Service.stop()", function () {
     it("should work when service started", function () {
         service.start({ port: 7000 });
         service.stop().should.be.ok;
+    });
+    it("should return a promise", function (done) {
+        service.start({ port: 7000 });
+        service.stop().done(function () {
+            done();
+        });
     });
 });
 
