@@ -17,6 +17,10 @@ function createRegistry(params) {
     }
     var identifier = 1;
 
+    registry.services = function () {
+        return services;
+    };
+
     registry.get("/", function (req, res, next) {
         var json = {};
         for (var id in services) {

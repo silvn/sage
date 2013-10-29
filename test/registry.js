@@ -28,9 +28,6 @@ describe("registry", function () {
     afterEach(function (done) {
         Registry.stop().done(done);
     });
-    it("should be a valid object", function () {
-        Registry.should.be.an.Object;
-    });
     it("should be an instance of Service", function () {
         Registry.should.be.an.instanceOf(Service);
     });
@@ -106,6 +103,27 @@ describe("registry", function () {
                 };
                 testRoute("/", { services: services }, done);
             });
+    });
+    it("should return a dictionary of services", function (done) {
+        addServicesToFind();
+        Registry.services().should.eql({
+            1: {
+                name: "svc1",
+                type: "car",
+                url: "http://0.0.0.0:29991"
+            },
+            2: {
+                name: "svc2",
+                type: "social",
+                url: "http://0.0.0.0:29992"
+            },
+            3: {
+                name: "svc3",
+                type: "car",
+                url: "http://0.0.0.0:29993"
+            }
+        });
+        done();
     });
     it("should describe a service by name", function (done) {
         var props = { name: "wendys", fries: "curly" };
