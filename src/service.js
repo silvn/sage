@@ -46,7 +46,7 @@ function Service(properties) {
         return (true);
     });
     self.resMap = {};
-    self.entities = {};
+    self.collections = {};
     self.isListening = false;
 }
 
@@ -162,7 +162,7 @@ function ensureDefaultRoutes(service) {
     });
     service.post("/:resource", function (req, res, next) {
         var key = req.params.resource;
-        var collection = service.entities[key];
+        var collection = service.collections[key];
         if (collection === undefined) {
             return next(new Service.ResourceNotFoundError(
                 "Cannot create an undefined resource"
@@ -174,19 +174,82 @@ function ensureDefaultRoutes(service) {
         res.send({ id: id });
     });
     service.get("/:resource/list", function (req, res, next) {
-        var url = service.url();
         var key = req.params.resource;
-        var collection = service.entities[key];
-        collection.fetch().done(function () {
-            res.send(this.map(function (resource) {
-                return [url, key, resource.property("id")].join("/");
+        var list = fetchCollection(service, key, function (collection) {
+            res.send(collection.map(function (resource) {
+                var id = resource.property("id");
+                return {
+                    id:  id,
+                    url: [service.url(), key, id].join("/")
+                }
             }));
+        });
+    });
+    service.get("/:resource/:id", function (req, res, next) {
+        var key = req.params.resource;
+        var id  = req.params.id;
+        fetchCollection(service, key, function (collection) {
+            var found = false;
+            var i = 0;
+            while (i < collection.length && !found) {
+                var resource = collection[i];
+                if (resource.property("id") == id) {
+                    found = true;
+                    resource.fetch().done(function () {
+                        return res.send(resource.properties());
+                    }).fail(function (err) {
+                        return res.send(new Service.InvalidError(
+                            "Couldn't fetch resource: " + err.message
+                        ));
+                    });
+                }
+            }
+            if (!found) {
+                res.send(new Service.ResourceNotFoundError(
+                    "Can't find " + key + " resource " + id)
+                );
+            }
         });
     });
 }
 
 function setResourceRoutes(service, key) {
     var base = service.url() + "/" + key;
+}
+
+function fetchCollection(service, key, callback) {
+    var collection = service.collections[key];
+    function postprocessCollection(collection) {
+        collection.fetched = true;
+        collection.forEach(function (resource) {
+            var id = resource.property("id");
+            if (id === undefined) {
+                id = collection.identifier++;
+                resource.property("id", id);
+            }
+            if (resource.url() === null) {
+                resource.url = function () {
+                    return [collection.url(), id].join("/");
+                };
+            }
+        });
+        callback(collection);
+    }
+    if (collection.fetched) {
+        callback(collection);
+    } else if (collection.url() === null) {
+        postprocessCollection(collection);
+    } else {
+        collection.fetch().done(function () {
+            postprocessCollection(collection);
+        }).fail(function (err) {
+            if (err !== undefined) {
+                throw new Service.InternalError(
+                    "Could not fetch collection: " + err.message
+                );
+            }
+        });
+    }
 }
 
 /**
@@ -291,8 +354,8 @@ Service.prototype.resource = function (key, resource) {
             (new resource) instanceof Collection;
         var ProtoCollection = isCollection ?
             resource : Collection.extend({ resource: resource });
-        this.entities[key] = new ProtoCollection();
-        this.entities[key].identifier = 1;
+        this.collections[key] = new ProtoCollection();
+        this.collections[key].identifier = 1;
         setResourceRoutes(this, key);
     }
     return this.resMap[key];

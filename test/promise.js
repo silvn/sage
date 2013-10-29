@@ -28,4 +28,13 @@ describe("Promise", function () {
         });
         promise.resolve();
     });
+    it("shouldn't call fail() on successful resolve", function (done) {
+        var promise = new Promise();
+        promise.fail(function () {
+            should.fail("Shouldn't get here");
+        }).done(function () {
+            should.be.ok;
+            done();
+        }).resolve();
+    });
 });
