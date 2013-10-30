@@ -1,5 +1,5 @@
 # Sage
-**Version 0.0.11**
+**Version 0.1.0**
 
 A REST service architecture for scientific data.
 
@@ -60,7 +60,10 @@ Each of the above management commands can be run on individual services by suppl
     sage {start,stop,restart,status} <service-name>
 
 ##More Help
-The `sage` tool has a general and command-specific help facility. To find out more about it, run:
+
+[API documentation for the library](http://silvn.github.io/sage/api)
+
+The `sage` startup script has a general and command-specific help facility. To find out more about it, run:
 
     sage help [<command>]
 
@@ -69,43 +72,20 @@ TODO
 
 ##Changelog
 
-####v0.0.11
+####v0.1.0
 
-* Registry proxies for remote services
-
-####v0.0.10
-
-* Collections act as native Arrays.
-* Services now fetch collections from remote endpoints.
-
-####v0.0.9
-
-* Better logging facility.
-* Resource classes parse fetched objects even when `parse` routine is defined.
-* Improved error handling.
-
-####v0.0.8
-
-* [NEW] Resource collections. (Closes GH-5)
-* [NEW] Resources and collections can be fetched from remote services and parsed. (Closes GH-6)
-
-####v0.0.7
-
-* [NEW] Container Sage class wraps other classes (Sage.Service, Sage.Resource, and Sage.Registry)
-* [NEW] Standardization of NPM configuration for use as external library
-
-####v0.0.6
-
-* [NEW] Resources. Each service can have a number of resources that are validated and provide default descriptions.
-
-####v0.0.5
-
-* [CHANGE] Using resource URIs for services
-
-####v0.0.3
-
-* [NEW] Service registry
-* Better support for overriding default routes
+* Services
+    * Logging with Bunyan
+* Service Registry
+    * Registry proxies for remote services.
+    * `Service#registry` promises to be resolved when registry pings.
+* Resources and Collections
+    * Resources and collections can be associated with services.
+    * Services provide default routes and responses.
+    * Services can fetch collections and resources from remote endpoints.
+    * Resources can override parsing data from remote endpoints.
+    * Collections act as native Arrays.
+* Sage class exposes Service, Resource, and Registry.
 
 ## License
 
