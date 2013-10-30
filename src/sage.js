@@ -17,7 +17,7 @@ module.exports = {
     Resource: Resource,
 
     /** @property {Registry} Registry The registry object. */
-    Registry: Registry,
+    Registry: Registry(),
 
     /** @property {Collection} Collection The collection class. */
     Collection: Collection

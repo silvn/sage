@@ -4,7 +4,7 @@ var util      = require("util");
 var async     = require("async");
 
 var Service   = require("../src/service").logLevel("fatal");
-var Registry   = require("../src/registry");
+var Registry  = require("../src/registry")();
 
 var URL = "http://0.0.0.0:34567";
 
@@ -21,18 +21,21 @@ function testRoute(route, body, done) {
 }
 
 describe("registry", function () {
-    beforeEach(function () {
+    before(function (done) {
         Registry.start({ port: 34567 });
+        done();
+    });
+    beforeEach(function () {
         Registry.reset();
     });
-    afterEach(function (done) {
+    after(function (done) {
         Registry.stop().done(done);
-    });
+    })
     it("should be an instance of Service", function () {
         Registry.should.be.an.instanceOf(Service);
     });
     it("should be a singleton", function () {
-        var Registry2 = require("../src/registry");
+        var Registry2 = require("../src/registry")();
         Registry.should.equal(Registry2);
     });
     it("should return a default index route", function (done) {

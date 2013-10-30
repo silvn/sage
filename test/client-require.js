@@ -4,7 +4,6 @@ var fs        = require('fs');
 var jsdom     = require('jsdom');
 
 global.document  = jsdom.jsdom("<html><head></head><body></body></html>");
-global.window    = global.document.createWindow();
 // global.requirejs = requirejs;
 // global.define    = requirejs.define;
 
