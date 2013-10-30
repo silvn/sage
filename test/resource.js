@@ -59,7 +59,7 @@ describe("Resource", function () {
         Resource.schema.should.be.a.Function;
         Resource.schema().should.eql({});        
     });
-    describe("#fetch()", function () {
+    describe("#fetch", function () {
         var app  = require("express")();
         var http = require("http");
         app.get("/cat", function (req, res) {
@@ -100,7 +100,7 @@ describe("Resource", function () {
             done();
         });
     });
-    describe("#parse()", function () {
+    describe("#parse", function () {
         it("should define behavior for fetch()", function (done) {
             var Cow = Resource.extend({
                 parse: function (data) {
