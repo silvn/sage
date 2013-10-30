@@ -4,16 +4,22 @@ var _       = require("underscore");
 var bunyan  = require("bunyan");
 
 var Collection = require("./collection");
+var Promise    = require("./promise");
 
 /**
  * @class Service
  *
  * The base service, providing all service functionality
- * Includes the Service API
+ * Includes the Service API.
  * 
  * @constructor
  * @param {Object} properties A set of properties. These properties will be
  *                 used to describe the service within the {@link Registry}.
+ *                 The constructor has some specially-handled properties:
+ * @param {Function} properties.initialize (optional)
+ *        A function called when a service is started
+ * @param {String} properties.registry (optional)
+ *        The address of a remote registry
  */
 function Service(properties) {
     var self = this;
@@ -37,7 +43,7 @@ function Service(properties) {
         req.log.info({req: req}, "start");
         return next();
     });
-    self.restify.on('after', function (req, res, route, e) {
+    self.restify.on("after", function (req, res, route, e) {
         req.log.info({res: res}, "finish");
     });
     self.restify.on("uncaughtException", function (req, res, route, e) {
@@ -46,9 +52,33 @@ function Service(properties) {
         return (true);
     });
     self.resMap = {};
-    self.entities = {};
+    self.collections = {};
     self.isListening = false;
+    if (self.props.hasOwnProperty("initialize")) {
+        self.initialize = self.props.initialize;
+        delete self.props["initialize"];
+    }
+    if (self.props.hasOwnProperty("registry")) {
+        self._registryURL = self.props.registry;
+        delete self.props["registry"];
+    }
 }
+
+/**
+ * @method initialize
+ * A virtual method called when the service is started.
+ */
+Service.prototype.initialize = function () {};
+
+/**
+ * @method registryURL
+ * Sets the address of a remote registry.
+ * 
+ * @param {String} address The remote URL
+ */
+Service.prototype.registryURL = function (value) {
+    this._registryURL = value;
+};
 
 /**
  * @method logLevel
@@ -162,7 +192,7 @@ function ensureDefaultRoutes(service) {
     });
     service.post("/:resource", function (req, res, next) {
         var key = req.params.resource;
-        var collection = service.entities[key];
+        var collection = service.collections[key];
         if (collection === undefined) {
             return next(new Service.ResourceNotFoundError(
                 "Cannot create an undefined resource"
@@ -174,19 +204,93 @@ function ensureDefaultRoutes(service) {
         res.send({ id: id });
     });
     service.get("/:resource/list", function (req, res, next) {
-        var url = service.url();
         var key = req.params.resource;
-        var collection = service.entities[key];
-        collection.fetch().done(function () {
-            res.send(this.map(function (resource) {
-                return [url, key, resource.property("id")].join("/");
+        var list = fetchCollection(service, key, function (collection) {
+            res.send(collection.map(function (resource) {
+                var id = resource.property("id");
+                return {
+                    id:  id,
+                    url: [service.url(), key, id].join("/")
+                }
             }));
+        });
+    });
+    service.get("/:resource/:id", function (req, res, next) {
+        var key = req.params.resource;
+        var id  = req.params.id;
+        fetchCollection(service, key, function (collection) {
+            var found = false;
+            var i = 0;
+            while (i < collection.length && !found) {
+                var resource = collection[i];
+                if (resource.property("id") == id) {
+                    found = true;
+                    resource.fetch().done(function () {
+                        return res.send(resource.properties());
+                    }).fail(function (err) {
+                        return res.send(new Service.InvalidError(
+                            "Couldn't fetch resource: " + err.message
+                        ));
+                    });
+                }
+            }
+            if (!found) {
+                res.send(new Service.ResourceNotFoundError(
+                    "Can't find " + key + " resource " + id)
+                );
+            }
         });
     });
 }
 
 function setResourceRoutes(service, key) {
     var base = service.url() + "/" + key;
+}
+
+/**
+ * @method fetchCollection
+ * Fetch a collection from a remote endpoint.
+ * 
+ * @param {Service} service The service
+ * @param {String} key The resource key
+ * @param {Function} callback The function called when the collection is fetched
+ * 
+ * @static
+ * @private
+ */
+function fetchCollection(service, key, callback) {
+    var collection = service.collections[key];
+    function postprocessCollection(collection) {
+        collection.fetched = true;
+        collection.forEach(function (resource) {
+            var id = resource.property("id");
+            if (id === undefined) {
+                id = collection.identifier++;
+                resource.property("id", id);
+            }
+            if (resource.url() === null) {
+                resource.url = function () {
+                    return [collection.url(), id].join("/");
+                };
+            }
+        });
+        callback(collection);
+    }
+    if (collection.fetched) {
+        callback(collection);
+    } else if (collection.url() === null) {
+        postprocessCollection(collection);
+    } else {
+        collection.fetch().done(function () {
+            postprocessCollection(collection);
+        }).fail(function (err) {
+            if (err !== undefined) {
+                throw new Service.InternalError(
+                    "Could not fetch collection: " + err.message
+                );
+            }
+        });
+    }
 }
 
 /**
@@ -198,37 +302,39 @@ function setResourceRoutes(service, key) {
  * @chainable
  */
 Service.prototype.start = function (params) {
+    var self = this;
     params = params || {};
     if (params.port === undefined) {
         throw new Error("port is a required parameter");
     }
-    if (this.restify.address() !== null) {
-        throw new Error("service already running at " + this.restify.address());
+    if (self.restify.address() !== null) {
+        throw new Error("service already running at " + self.restify.address());
     }
-    var deferred = Q.defer();
-    this.listen(params.port, function () {
-        deferred.resolve(true);
+    self.startedPromise = new Promise(self);
+    self.listen(params.port, function () {
+        self.startedPromise.resolve(true);
     });
-    this.startedPromise = deferred.promise;
-    return this;
+    return self.startedPromise;
 };
 
 /**
  * @method
  * Stops the service.
  * 
- * @chainable
+ * @return {Promise}
  */
 Service.prototype.stop = function () {
     var self = this;
+    var stopPromise = new Promise(self);
     if (this.startedPromise === null) {
         throw new Error("service has not started");
     }
     this.startedPromise.done(function () {
         self.restify.close();
+        stopPromise.resolve();
     });
     self.isListening = false;
-    return this;
+    return stopPromise;
 };
 
 /**
@@ -239,6 +345,7 @@ Service.prototype.stop = function () {
  * @chainable
  */
 Service.prototype.listen = function () {
+    this.initialize();
     ensureDefaultRoutes(this);
     this.isListening = true;
     return this.restify.listen.apply(this.restify, arguments);
@@ -291,8 +398,8 @@ Service.prototype.resource = function (key, resource) {
             (new resource) instanceof Collection;
         var ProtoCollection = isCollection ?
             resource : Collection.extend({ resource: resource });
-        this.entities[key] = new ProtoCollection();
-        this.entities[key].identifier = 1;
+        this.collections[key] = new ProtoCollection();
+        this.collections[key].identifier = 1;
         setResourceRoutes(this, key);
     }
     return this.resMap[key];
@@ -318,6 +425,17 @@ Service.prototype.resources = function () {
  */
 Service.prototype.listening = function () {
     return this.isListening;
+};
+
+Service.prototype.registry = function () {
+    var Registry = require("./registry");
+    if (this._registryURL === undefined) {
+        var promise = new Promise();
+        promise.resolve(Registry);
+        return promise;
+    } else {
+        return Registry.proxy(this._registryURL);
+    }
 };
 
 DELEGATE_METHODS.forEach(function (method) {

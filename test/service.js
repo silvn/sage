@@ -2,10 +2,12 @@ var supertest  = require("supertest");
 var express    = require("express");
 var util       = require("util");
 var async      = require("async");
+var spawn      = require("child_process").spawn;
 
 var Service    = require("../src/service").logLevel("fatal");
 var Resource   = require("../src/resource");
 var Collection = require("../src/collection");
+var Registry   = require("../src/registry");
 
 function testMethod(method, done, expectBody) {
     var service = new Service();
@@ -56,18 +58,33 @@ describe("Service", function () {
             done();
         });
     });
-    it("should allow user properties in constructor", function () {
-        var service = new Service({ name: "namedService" });
-        service.property("name").should.equal("namedService");
-    });
-    it("should allow properties to be defined a la carte", function () {
-        var service = new Service();
-        service.property("prop1", "propValue");
-        service.property("prop1").should.equal("propValue");
-    });
-    it("should return all properties", function () {
-        var service = new Service({ p1: "v1", p2: "v2" });
-        service.properties().should.eql({ p1: "v1", p2: "v2" });
+    describe("#constructor", function () {
+        it("should allow user properties", function () {
+            var service = new Service({ name: "namedService" });
+            service.property("name").should.equal("namedService");
+        });
+        it("should allow properties to be defined a la carte", function () {
+            var service = new Service();
+            service.property("prop1", "propValue");
+            service.property("prop1").should.equal("propValue");
+        });
+        it("should return all properties", function () {
+            var service = new Service({ p1: "v1", p2: "v2" });
+            service.properties().should.eql({ p1: "v1", p2: "v2" });
+        });
+        it("should accept a special initialize function", function () {
+            initialized = false;
+            var service = new Service({
+                initialize: function () {
+                    initialized = true;
+                }
+            });
+            initialized.should.be.false;
+            service.start({ port: 12345 });
+            initialized.should.be.true;
+            [service.property("initialize")].should.be.null;
+            service.stop();
+        });
     });
     it("should expose REST error classes", function () {
         Service.ResourceNotFoundError.should.be.a.Function;
@@ -87,6 +104,26 @@ describe("Service", function () {
             res1: resource1,
             res2: resource2
         });
+    });
+    it("should be associated with a Registry", function (done) {
+        if (Registry.listening()) { Registry.stop(); }
+        Registry.listen(75757);
+        var other = new Service({ id: "deadbeef", city: "Chicago" });
+        other.listen(75758);
+        Registry.add(other);
+
+        var service = new Service({
+            initialize: function () {
+                this.registry().done(function (registry) {
+                    var service = registry.find("id", "deadbeef");
+                    service.city.should.equal("Chicago");
+                    Registry.stop();
+                    done();
+                });
+            },
+            registry: "http://0.0.0.0:75757"
+        });
+        service.listen(75759);
     });
 });
 
@@ -119,6 +156,12 @@ describe("Service.start()", function () {
         lService.stop();
         lService.listening().should.be.false;
     });
+    it("should return a promise", function (done) {
+        service.start({ port: 7000 }).done(function () {
+            this.stop();
+            done();
+        });
+    });
 });
 
 describe("Service.stop()", function () {
@@ -129,6 +172,12 @@ describe("Service.stop()", function () {
     it("should work when service started", function () {
         service.start({ port: 7000 });
         service.stop().should.be.ok;
+    });
+    it("should return a promise", function (done) {
+        service.start({ port: 7000 });
+        service.stop().done(function () {
+            done();
+        });
     });
 });
 
@@ -239,40 +288,76 @@ describe("Resource API", function () {
                 [err].should.be.null;
                 res.status.should.equal(200);
                 res.body.should.eql([
-                    URL + "/baseball/1",
-                    URL + "/baseball/2"
+                    { id: 1, url: URL + "/baseball/1" },
+                    { id: 2, url: URL + "/baseball/2" }
                 ]);
                 done();
             });
         });
     });
-    it("should fetch a list from a collection", function (done) {
-        var app = express();
-        var http = require("http");
-        app.get("/", function (req, res) {
-            res.send(200, [
-                { id: "cat0001" },
-                { id: "cat0002" },
-                { id: "cat0003" },
-                { id: "cat0004" },
-                { id: "cat0005" }
-            ]);
+    var app = express();
+    var http = require("http");
+    app.get("/cats", function (req, res) {
+        res.send(200, [
+            { id: "cat0001" },
+            { id: "cat0002" },
+            { id: "cat0003" },
+            { id: "cat0004" },
+            { id: "cat0005" }
+        ]);
+    });
+    app.get("/cats/cat0001", function (req, res) {
+        res.send(200, {
+            name: "Felix",
+            breed: "Persian",
+            legs: 4
         });
-        var server = http.createServer(app).listen(56565);
-        var LIST_URL = "http://0.0.0.0:56565";
-        var Cats = Collection.extend({ url: LIST_URL });
+    });
+    var server = http.createServer(app).listen(56565);
+    var LIST_URL = "http://0.0.0.0:56565";
+    it("should fetch a list from a collection", function (done) {
+        var Cats = Collection.extend({ url: LIST_URL + "/cats" });
         service.resource("cat", Cats);
         request.get("/cat/list").expect(200).end(function (err, res) {
             [err].should.be.null;
             res.body.should.eql([
-                URL + "/cat/cat0001",
-                URL + "/cat/cat0002",
-                URL + "/cat/cat0003",
-                URL + "/cat/cat0004",
-                URL + "/cat/cat0005"
+                { id: "cat0001", url: URL + "/cat/cat0001" },
+                { id: "cat0002", url: URL + "/cat/cat0002" },
+                { id: "cat0003", url: URL + "/cat/cat0003" },
+                { id: "cat0004", url: URL + "/cat/cat0004" },
+                { id: "cat0005", url: URL + "/cat/cat0005" }
             ]);
             done();
         })
+    });
+    it("should fetch a collection only once", function (done) {
+        var getCalled = 0;
+        app.get("/delta", function (req, res) {
+            getCalled++;
+            res.send([]);
+        });
+        service.resource("rsrc", Collection.extend({
+            url: LIST_URL + "/delta"
+        }));
+        request.get("/rsrc/list").expect(200).end(function () {
+            getCalled.should.equal(1);
+            request.get("/rsrc/list").expect(200).end(function () {
+                getCalled.should.equal(1);
+                done();
+            });
+        });
+    });
+    it("should fetch a single resource", function (done) {
+        request.get("/cat/cat0001").expect(200).end(function (err, res) {
+            [err].should.be.null;
+            res.body.should.eql({
+                id:   "cat0001",
+                name: "Felix",
+                breed: "Persian",
+                legs: 4
+            });
+            done();
+        });
     });
 });
 

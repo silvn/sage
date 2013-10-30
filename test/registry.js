@@ -5,9 +5,8 @@ var async     = require("async");
 
 var Service   = require("../src/service").logLevel("fatal");
 var Registry   = require("../src/registry");
-Registry.listen(34567);
 
-var URL = "http://0.0.0.0:34567"
+var URL = "http://0.0.0.0:34567";
 
 function testRoute(route, body, done) {
     supertest(Registry).get(route).end(function (err, res) {
@@ -23,10 +22,11 @@ function testRoute(route, body, done) {
 
 describe("registry", function () {
     beforeEach(function () {
+        Registry.start({ port: 34567 });
         Registry.reset();
     });
-    it("should be a valid object", function () {
-        Registry.should.be.an.Object;
+    afterEach(function (done) {
+        Registry.stop().done(done);
     });
     it("should be an instance of Service", function () {
         Registry.should.be.an.instanceOf(Service);
@@ -39,7 +39,6 @@ describe("registry", function () {
         testRoute("/", { services: {} }, done);
     });
     it("should register a service", function (done) {
-        Registry.add.should.be.a.Function;
         var service = new Service({ id: 5, name: "service1" });
         service.listen(5555);
         Registry.add(service);
@@ -105,6 +104,27 @@ describe("registry", function () {
                 testRoute("/", { services: services }, done);
             });
     });
+    it("should return a dictionary of services", function (done) {
+        addServicesToFind();
+        Registry.services().should.eql({
+            1: {
+                name: "svc1",
+                type: "car",
+                url: "http://0.0.0.0:29991"
+            },
+            2: {
+                name: "svc2",
+                type: "social",
+                url: "http://0.0.0.0:29992"
+            },
+            3: {
+                name: "svc3",
+                type: "car",
+                url: "http://0.0.0.0:29993"
+            }
+        });
+        done();
+    });
     it("should describe a service by name", function (done) {
         var props = { name: "wendys", fries: "curly" };
         var service = new Service(props);
@@ -124,7 +144,43 @@ describe("registry", function () {
             done();
         });
     });
+    it("should ping a service upon registration");
+    function addService(props, port) {
+        var svc = new Service(props);
+        svc.start({ port: port });
+        Registry.add(svc);
+        svc.stop();
+    }
+    function addServicesToFind() {
+        addService({ name: "svc1", type: "car"    }, 29991);
+        addService({ name: "svc2", type: "social" }, 29992);
+        addService({ name: "svc3", type: "car"    }, 29993);
+    }
+    describe("#find", function () {
+        it("should return a service", function (done) {
+            addServicesToFind(29991);
+            var service = Registry.find("name", "svc1");
+            service.should.be.an.Object;
+            service.should.eql({
+                name: "svc1", type: "car", url: "http://0.0.0.0:29991"
+            });
+            done();
+        });
+    });
+    describe("#proxy", function () {
+        it("should clone functionality of real Registry", function (done) {
+            addServicesToFind(29995);
+            Registry.proxy(URL).done(function (registry) {
+                registry.should.not.equal(Registry);
+                registry.find("name", "svc2").should.eql({
+                    name: "svc2", type: "social", url: "http://0.0.0.0:29992"
+                });
+                done();
+            });
+        });
+    });
 });
+
 
 describe("Registered service", function () {
     beforeEach(function () {

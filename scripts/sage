@@ -1,6 +1,6 @@
 #!/bin/bash
 
-MONITOR=${MONITOR:-node}
+MONITOR=${MONITOR:-""}
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 SAGEDIR=${SAGEDIR:-`cd $SCRIPTDIR/.. && pwd -P`}
 BASEDIR=$PWD
@@ -133,6 +133,36 @@ function _svc_pidfile {
     echo $SVCPIDFILE | sed "s/%%/$svc/"
 }
 
+function _start_service {
+    local service=($*)
+    [ -z "${service[*]}" ] && return
+    local port=${service[0]}
+    local name=${service[1]}
+    local controller=${service[2]}
+    local outlog=$LOGDIR/$name.out
+    local errlog=$LOGDIR/$name.err
+    rm -f "$outlog" "$errlog"
+    local pidfile=`_svc_pidfile $name`
+    local pid=`_running_pid $pidfile`
+    if [ $name == "registry" ]; then
+        [ -n "$_registry_started" ] && return
+        controller=$SAGEDIR/src/registry.js
+        _registry_started=1
+    fi
+    if [ $controller != "undefined" ]; then
+        controller=`_abspath $controller`
+        $MONITOR node $SAGEDIR/scripts/start-service.js \
+            --port     $port \
+            --service  "$controller" \
+            --name     "$name" \
+            --out      "$outlog" \
+            --err      "$errlog" \
+            --registry "$reg_url" 2> "$errlog" &
+        echo $! > $pidfile
+    fi
+    
+}
+
 function _start_services {
     local svc=$1
     if [ ! -e "$SAGESVCCONF" ]; then
@@ -149,64 +179,24 @@ function _start_services {
         services=$retvalue
     fi
 
-    echo "Starting services..."
+    local reg_svc=($(sage_cmd_services registry))
+    local reg_url="http://${reg_svc[3]}:${reg_svc[0]}"
+
+    # Registry needs to be restarted...?
+    (_start_service "${reg_svc[*]}"; wait) &
+    
     echo "$services" | (while read line
         do
             local service=($line)
-            local port=${service[0]}
-            local name=${service[1]}
-            local controller=${service[2]}
-            local outlog=$LOGDIR/$name.out
-            local errlog=$LOGDIR/$name.err
-            rm -f "$outlog" "$errlog"
-            local pidfile=`_svc_pidfile $name`
-            local pid=`_running_pid $pidfile`
-            if [ $name == "registry" ]; then
-                controller=$SAGEDIR/src/registry.js
-            fi
-            if [ $controller != "undefined" ]; then
-                controller=`_abspath $controller`
-                $MONITOR $SAGEDIR/scripts/start-service.js \
-                    --port    $port \
-                    --service $controller \
-                    --name    $name \
-                    --out     "$outlog" \
-                    --err     "$errlog" 2> "$errlog" &
-                echo $! > $pidfile
+            if [ "${service[1]}" != "registry" ]; then
+                _start_service $line
             fi
         done
         wait
     ) &
     sleep 1
     sagepid=$!
-    register_services $svc
-}
-
-function register_services {
-    local svc=$1
-    local services=$(sage_cmd_services $svc)
-    local reg_svc=($(sage_cmd_services registry))
-    local reg_url="http://${reg_svc[3]}:${reg_svc[0]}"
-    echo "$services" | (while read line
-        do
-            local service=($line)
-            local port=${service[0]}
-            local name=${service[1]}
-            local host=${service[3]}
-            if [ "$name" == "registry" ]; then
-                continue;
-            fi
-            url="http://$host:$port"
-            define payload <<EOJSON
-{ "name" : "$name", "port": "$port", "host": "$host", "url": "$url" }
-EOJSON
-            local response=$(curl -is -H "Content-type: application/json" \
-                -X POST -d "$payload" "$reg_url/service")
-            if [ $(grep -c '200 OK' <<< "$response") -eq 0 ]; then
-                _error "Could not register service $name:\n$response"
-            fi
-        done
-    )
+    $MONITOR $0 register $svc
 }
 
 function _start_all_sage {
@@ -247,7 +237,9 @@ function _service_status {
         echo "Service '$name' is not running."
         return
     fi
-    _status_line $name `_running_pid $pidfile` `_service_url ${service[@]}`
+    local pid=`_running_pid $pidfile`
+    pid=${pid:-undefined}
+    _status_line $name $pid `_service_url ${service[@]}`
 }
 
 # Ensure privileges for helpful output
@@ -576,6 +568,40 @@ $registry_port registry undefined $hostname"
         fi
         printf "$outfmt" ${svc[@]}
     done
+}
+
+# ---------------------------------------------------------------------------
+# SAGE REGISTER
+# ---------------------------------------------------------------------------
+_help_register="sage register [<service>]
+
+Registers services. With no arguments, registers all services.
+    <service>   Register a specific service"
+function sage_cmd_register {
+    local svc=$1
+    local services=$(sage_cmd_services $svc)
+    local reg_svc=($(sage_cmd_services registry))
+    local reg_url="http://${reg_svc[3]}:${reg_svc[0]}"
+    echo "$services" | (while read line
+        do
+            local service=($line)
+            local port=${service[0]}
+            local name=${service[1]}
+            local host=${service[3]}
+            if [ "$name" == "registry" ]; then
+                continue;
+            fi
+            url="http://$host:$port"
+            define payload <<EOJSON
+{ "name" : "$name", "port": "$port", "host": "$host", "url": "$url" }
+EOJSON
+            local response=$(curl -is -H "Content-type: application/json" \
+                -X POST -d "$payload" "$reg_url/service")
+            if [ $(grep -c '200 OK' <<< "$response") -eq 0 ]; then
+                _error "Could not register service $name: $response"
+            fi
+        done
+    )
 }
 
 # ---------------------------------------------------------------------------

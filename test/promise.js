@@ -28,4 +28,37 @@ describe("Promise", function () {
         });
         promise.resolve();
     });
+    it("shouldn't call fail() on successful resolve", function (done) {
+        var promise = new Promise();
+        promise.fail(function () {
+            should.fail("Shouldn't get here");
+        }).done(function () {
+            should.be.ok;
+            done();
+        }).resolve();
+    });
+    it("should allow multiple done() callbacks", function (done) {
+        var called = 0;
+        var promise = new Promise();
+        promise.done(function (val) {
+            called += val;
+        }).done(function (val) {
+            called += val;
+            called.should.equal(2);
+            done();
+        });
+        promise.resolve(1);
+    });
+    it("should allow multiple fail() callbacks", function (done) {
+        var called = 0;
+        var promise = new Promise();
+        promise.fail(function (val) {
+            called += val;
+        }).fail(function (val) {
+            called += val;
+            called.should.equal(2);
+            done();
+        });
+        promise.resolveFail(1);
+    })
 });
