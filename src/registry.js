@@ -7,7 +7,6 @@ var Restify = require("restify");
  * Describes a set of registered services.
  * 
  * @extends Service
- * @singleton
  */
 (function (module) {
     "use strict";
@@ -129,25 +128,29 @@ var Restify = require("restify");
         return registry;
     }
 
-    var Registry = createRegistry();
-
-    /**
-     * @method proxy
-     * Create a proxy object for a remote registry. The proxy object supports
-     * similar operations as a local registry.
-     * 
-     * @param {String} url The address of the remote registry
-     * @return {Registry} A proxy object representing the registry
-     */
-    Registry.proxy = function (url) {
-        var client = Restify.createJsonClient({ url: url });
-        var promise = new Promise();
-        client.get("/", function (err, req, res, obj) {
-            var proxy = createRegistry(obj);
-            promise.resolve(proxy);
-        });
-        return promise;
-    };        
-
-    module.exports = Registry;
+    var Registry = undefined;
+    module.exports = function () {
+        if (Registry === undefined) {
+            Registry = createRegistry();
+            /**
+             * @method proxy
+             * Create a proxy object for a remote registry. The proxy object
+             * supports similar operations as a local registry.
+             * 
+             * @param {String} url The address of the remote registry
+             * @return {Registry} A proxy object representing the registry
+             */
+            Registry.proxy = function (url) {
+                var client = Restify.createJsonClient({ url: url });
+                var promise = new Promise();
+                client.get("/", function (err, req, res, obj) {
+                    var proxy = createRegistry(obj);
+                    promise.resolve(proxy);
+                });
+                return promise;
+            };
+        }
+        return Registry;
+            
+    }
 })(module);

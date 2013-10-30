@@ -9,6 +9,7 @@ var Promise    = require("./promise");
 /* jshint loopfunc: true, newcap: false */
 
 (function (module) {
+    "use strict";
     /**
      * @class Service
      *
@@ -23,8 +24,7 @@ var Promise    = require("./promise");
      *        A function called when a service is started
      * @param {String} properties.registry (optional)
      *        The address of a remote registry
-        */
-    "use strict";
+     */
 
     function Service(properties) {
         var self = this;
@@ -52,7 +52,8 @@ var Promise    = require("./promise");
             req.log.info({res: res}, "finish");
         });
         self.restify.on("uncaughtException", function (req, res, route, e) {
-            res.send(new restify.InternalError(e, e.message || 'unexpected error'));
+            res.send(new restify.InternalError(e, e.message ||
+                'unexpected error'));
             req.log.error(e.stack, "finish");
             return (true);
         });
@@ -314,7 +315,9 @@ var Promise    = require("./promise");
             throw new Error("port is a required parameter");
         }
         if (self.restify.address() !== null) {
-            throw new Error("service already running at " + self.restify.address());
+            throw new Error(
+                "service already running at " + self.restify.address()
+            );
         }
         self.startedPromise = new Promise(self);
         self.listen(params.port, function () {
@@ -434,13 +437,13 @@ var Promise    = require("./promise");
     };
 
     Service.prototype.registry = function () {
-        var Registry = require("./registry");
+        var registry = require("./registry")();
         if (this._registryURL === undefined) {
             var promise = new Promise();
-            promise.resolve(Registry);
+            promise.resolve(registry);
             return promise;
         } else {
-            return Registry.proxy(this._registryURL);
+            return registry.proxy(this._registryURL);
         }
     };
 

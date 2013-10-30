@@ -106,18 +106,21 @@ describe("Service", function () {
         });
     });
     it("should be associated with a Registry", function (done) {
-        if (Registry.listening()) { Registry.stop(); }
-        Registry.listen(75757);
+        var registry = new Registry();
+        if (registry.listening()) {
+            registry.stop();
+        }
+        registry.start({ port: 75757 });
         var other = new Service({ id: "deadbeef", city: "Chicago" });
         other.listen(75758);
-        Registry.add(other);
+        registry.add(other);
 
         var service = new Service({
             initialize: function () {
-                this.registry().done(function (registry) {
-                    var service = registry.find("id", "deadbeef");
+                this.registry().done(function (proxy) {
+                    var service = proxy.find("id", "deadbeef");
                     service.city.should.equal("Chicago");
-                    Registry.stop();
+                    registry.stop();
                     done();
                 });
             },
