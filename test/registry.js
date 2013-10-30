@@ -252,8 +252,10 @@ describe("Registered service", function () {
         var service = new Service({ name: "Arby's" });
         service.start({ port: 55755 });
         Registry.add(service).done(function () {
-            service.registryURL().should.equal(URL);
-            done();
+            setTimeout(function () {
+                service.registryURL().should.equal(URL);
+                done();
+            }, 10);
         });
     });
 });

@@ -41,6 +41,9 @@ if (argv.err) {
 }
 
 var service = require(argv.service);
+if (typeof(service) === "function") {
+    service = service();
+}
 service.property("name", argv.name);
 service.registryURL(argv.registry);
 service.start({ port: argv.port }).done(function () {

@@ -99,15 +99,10 @@ var Restify = require("restify");
             }
             var promise = new Promise();
             this.client(props.url).put("/settings", { registry: this.url() },
-                function (err, req, res, obj) {
-                    if (err !== null) {
-                        promise.resolveFail(err);
-                    } else {
-                        promise.resolve(id);
-                    }
-                }
-            );
+            function (err, req, res) {
+            });
             services[id] = props;
+            promise.resolve(id);
             return promise;
         };
 
