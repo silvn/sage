@@ -17,6 +17,14 @@ function createRegistry(params) {
     }
     var identifier = 1;
 
+    /**
+     * @method services
+     * Shows the currently-registered services.
+     * 
+     * @return {Object}
+     * @return {String} return.id
+     * @return {Object} return.metadata
+     */
     registry.services = function () {
         return services;
     };
@@ -55,6 +63,13 @@ function createRegistry(params) {
         });
     });
 
+    /**
+     * @method add
+     * Adds a service to the registry.
+     * 
+     * @param {Service|Object} service A service object or plain object
+     * @return {Number} The assigned ID
+     */
     registry.add = function (service) {
         var id, props;
         if (service instanceof Service) {
@@ -78,6 +93,15 @@ function createRegistry(params) {
         return id;
     };
 
+    /**
+     * @method find
+     * Finds a registered service based on parameters. Returns a found service's
+     * metadata or null if a service is not found.
+     * 
+     * @param {Mixed} key The name of the parameter
+     * @param {Mixed} value The value of the parameter
+     * @return {Object} Service metadata  
+     */
     registry.find = function (key, value) {
         for (var id in services) {
             var service = services[id];
@@ -88,6 +112,10 @@ function createRegistry(params) {
         return null;
     };
 
+    /**
+     * @method reset
+     * Remove any registered services from the registry
+     */
     registry.reset = function () {
         services = {};
         identifier = 1;
@@ -97,6 +125,14 @@ function createRegistry(params) {
 
 var Registry = createRegistry();
 
+/**
+ * @method proxy
+ * Create a proxy object for a remote registry. The proxy object supports
+ * similar operations as a local registry.
+ * 
+ * @param {String} url The address of the remote registry
+ * @return {Registry} A proxy object representing the registry
+ */
 Registry.proxy = function (url) {
     var client = Restify.createJsonClient({ url: url });
     var promise = new Promise();

@@ -10,11 +10,16 @@ var Promise    = require("./promise");
  * @class Service
  *
  * The base service, providing all service functionality
- * Includes the Service API
+ * Includes the Service API.
  * 
  * @constructor
  * @param {Object} properties A set of properties. These properties will be
  *                 used to describe the service within the {@link Registry}.
+ *                 The constructor has some specially-handled properties:
+ * @param {Function} properties.initialize (optional)
+ *        A function called when a service is started
+ * @param {String} properties.registry (optional)
+ *        The address of a remote registry
  */
 function Service(properties) {
     var self = this;
@@ -59,8 +64,18 @@ function Service(properties) {
     }
 }
 
+/**
+ * @method initialize
+ * A virtual method called when the service is started.
+ */
 Service.prototype.initialize = function () {};
 
+/**
+ * @method registryURL
+ * Sets the address of a remote registry.
+ * 
+ * @param {String} address The remote URL
+ */
 Service.prototype.registryURL = function (value) {
     this._registryURL = value;
 };
@@ -232,6 +247,17 @@ function setResourceRoutes(service, key) {
     var base = service.url() + "/" + key;
 }
 
+/**
+ * @method fetchCollection
+ * Fetch a collection from a remote endpoint.
+ * 
+ * @param {Service} service The service
+ * @param {String} key The resource key
+ * @param {Function} callback The function called when the collection is fetched
+ * 
+ * @static
+ * @private
+ */
 function fetchCollection(service, key, callback) {
     var collection = service.collections[key];
     function postprocessCollection(collection) {
