@@ -144,6 +144,7 @@ describe("registry", function () {
             done();
         });
     });
+    it("should ping a service upon registration");
     function addService(props, port) {
         var svc = new Service(props);
         svc.start({ port: port });
