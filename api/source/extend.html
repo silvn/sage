@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>The source code</title>
+  <link href="../resources/prettify/prettify.css" type="text/css" rel="stylesheet" />
+  <script type="text/javascript" src="../resources/prettify/prettify.js"></script>
+  <style type="text/css">
+    .highlight { display: block; background-color: #ddd; }
+  </style>
+  <script type="text/javascript">
+    function highlight() {
+      document.getElementById(location.hash.replace(/#/, "")).className = "highlight";
+    }
+  </script>
+</head>
+<body onload="prettyPrint(); highlight();">
+  <pre class="prettyprint lang-js">var _ = require(&quot;underscore&quot;);
+
+<span id='extend'>/**
+</span> * @class
+ * @method extend
+ * Extends a class or an .
+ * 
+ *     @example
+ *     var Animal = function () {}
+ *     Animal.extend = require(&quot;extend&quot;);
+ *     var Cow = Animal.extend({ sound: &quot;moo&quot; });
+ *
+ * @param {Object} args Arguments with which to extend
+ * @return {Object} The extended class
+ */
+(function (module) {
+    &quot;use strict&quot;;
+    module.exports = function extend(args) {
+        args = (args || {});
+        var Super = this;
+        var Extended;
+
+        if (args.hasOwnProperty(&quot;constructor&quot;)) {
+            Extended = args.constructor;
+        } else {
+            Extended = function () { return Super.apply(this, arguments); };
+        }
+
+        _.extend(Extended, Super);
+
+        // Set prototype chain
+        var Proto = function () { this.constructor = Extended; };
+        Proto.prototype = Super.prototype;
+        Extended.prototype = new Proto();
+
+        _.extend(Extended.prototype, args);
+        Extended.extend = extend;
+
+        Extended.__super__ = Super.prototype;
+
+        return Extended;
+    };
+})(module);</pre>
+</body>
+</html>

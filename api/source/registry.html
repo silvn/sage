@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>The source code</title>
+  <link href="../resources/prettify/prettify.css" type="text/css" rel="stylesheet" />
+  <script type="text/javascript" src="../resources/prettify/prettify.js"></script>
+  <style type="text/css">
+    .highlight { display: block; background-color: #ddd; }
+  </style>
+  <script type="text/javascript">
+    function highlight() {
+      document.getElementById(location.hash.replace(/#/, "")).className = "highlight";
+    }
+  </script>
+</head>
+<body onload="prettyPrint(); highlight();">
+  <pre class="prettyprint lang-js">var Service = require(&quot;./service&quot;);
+var Promise = require(&quot;./promise&quot;);
+var Restify = require(&quot;restify&quot;);
+
+<span id='Registry'>/**
+</span> * @class Registry
+ * Describes a set of registered services.
+ * 
+ * @extends Service
+ */
+(function (module) {
+    &quot;use strict&quot;;
+    function createRegistry(params) {
+        var registry = new Service();
+        var services = {};
+        if (params !== undefined) {
+            services = params.services;
+        }
+        var identifier = 1;
+
+<span id='Registry-method-services'>        /**
+</span>         * @method services
+         * Shows the currently-registered services.
+         * 
+         * @return {Object}
+         * @return {String} return.id
+         * @return {Object} return.metadata
+         */
+        registry.services = function () {
+            return services;
+        };
+
+        registry.get(&quot;/&quot;, function (req, res, next) {
+            var json = {};
+            for (var id in services) {
+                if (services.hasOwnProperty(id)) {
+                    var service = services[id];
+                    json[registry.url() + &quot;/service/&quot; + id] = service;
+                }
+            }
+            res.send({ services: json });
+            next();
+        });
+
+        registry.get(&quot;/service/:id&quot;, function (req, res, next) {
+            var id = req.params.id;
+            var service = services[id];
+            if (service !== undefined) {
+                res.send(service);
+            } else {
+                next(new Service.ResourceNotFoundError(
+                    &quot;Service &quot; + id + &quot; is not registered&quot;));
+            }
+        });
+
+        registry.post(&quot;/service&quot;, function (req, res, next) {
+            var id, body = req.body;
+            try {
+                id = registry.add(body);
+            } catch (err) {
+                return next(new Service.InvalidContentError(err.message));
+            }
+            res.send(200, {
+                message: &quot;Service was added successfully&quot;,
+                id: id
+            });
+        });
+
+<span id='Registry-method-add'>        /**
+</span>         * @method add
+         * Adds a service to the registry.
+         * 
+         * @param {Service|Object} service A service object or plain object
+         * @return {Number} The assigned ID
+         */
+        registry.add = function (service) {
+            var id, props;
+            if (service instanceof Service) {
+                if (service.listening() === false) {
+                    throw new Error(&quot;Service is not listening&quot;);
+                }
+                id = service.property(&quot;id&quot;);
+                props = service.properties();
+                props.url = service.url();
+                this.client.post(&quot;/settings&quot;, { registry: this.url() },
+                    function (err, req, res, obj) {
+                        console.log(err, res.status, res.body);
+                    }
+                );
+            } else {
+                if (service.url === undefined) {
+                    throw new Error(&quot;URL property is not defined&quot;);
+                }
+                id = service.id;
+                props = service;
+            }
+            if (id === undefined) {
+                id = identifier++;
+            }
+            services[id] = props;
+            return id;
+        };
+
+<span id='Registry-method-find'>        /**
+</span>         * @method find
+         * Finds a registered service based on parameters. Returns a found
+         * service's metadata or null if a service is not found.
+         * 
+         * @param {Mixed} key The name of the parameter
+         * @param {Mixed} value The value of the parameter
+         * @return {Object} Service metadata  
+         */
+        registry.find = function (key, value) {
+            for (var id in services) {
+                if (services.hasOwnProperty(id)) {
+                    var service = services[id];
+                    if (service[key] == value) {
+                        return service;
+                    }
+                }
+            }
+            return null;
+        };
+
+<span id='Registry-method-reset'>        /**
+</span>         * @method reset
+         * Remove any registered services from the registry
+         */
+        registry.reset = function () {
+            services = {};
+            identifier = 1;
+        };
+        return registry;
+    }
+
+    var Registry = undefined;
+    module.exports = function () {
+        if (Registry === undefined) {
+            Registry = createRegistry();
+<span id='Registry-method-proxy'>            /**
+</span>             * @method proxy
+             * Create a proxy object for a remote registry. The proxy object
+             * supports similar operations as a local registry.
+             * 
+             * @param {String} url The address of the remote registry
+             * @return {Registry} A proxy object representing the registry
+             */
+            Registry.proxy = function (url) {
+                var client = Restify.createJsonClient({ url: url });
+                var promise = new Promise();
+                client.get(&quot;/&quot;, function (err, req, res, obj) {
+                    var proxy = createRegistry(obj);
+                    promise.resolve(proxy);
+                });
+                return promise;
+            };
+        }
+        return Registry;
+            
+    }
+})(module);</pre>
+</body>
+</html>

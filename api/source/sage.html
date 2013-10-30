@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>The source code</title>
+  <link href="../resources/prettify/prettify.css" type="text/css" rel="stylesheet" />
+  <script type="text/javascript" src="../resources/prettify/prettify.js"></script>
+  <style type="text/css">
+    .highlight { display: block; background-color: #ddd; }
+  </style>
+  <script type="text/javascript">
+    function highlight() {
+      document.getElementById(location.hash.replace(/#/, "")).className = "highlight";
+    }
+  </script>
+</head>
+<body onload="prettyPrint(); highlight();">
+  <pre class="prettyprint lang-js">var Service    = require(&quot;./service&quot;);
+var Resource   = require(&quot;./resource&quot;);
+var Registry   = require(&quot;./registry&quot;);
+var Collection = require(&quot;./collection&quot;);
+
+<span id='Sage'>/**
+</span> * @class Sage
+ * The toplevel class.
+ * 
+ * @singleton
+ */
+module.exports = {
+<span id='Sage-property-Service'>    /** @property {Service} Service The service class. */
+</span>    Service:  Service,
+
+<span id='Sage-property-Resource'>    /** @property {Resource} Resource The resource class. */
+</span>    Resource: Resource,
+
+<span id='Sage-property-Registry'>    /** @property {Registry} Registry The registry object. */
+</span>    Registry: Registry(),
+
+<span id='Sage-property-Collection'>    /** @property {Collection} Collection The collection class. */
+</span>    Collection: Collection
+};</pre>
+</body>
+</html>

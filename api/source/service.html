@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>The source code</title>
+  <link href="../resources/prettify/prettify.css" type="text/css" rel="stylesheet" />
+  <script type="text/javascript" src="../resources/prettify/prettify.js"></script>
+  <style type="text/css">
+    .highlight { display: block; background-color: #ddd; }
+  </style>
+  <script type="text/javascript">
+    function highlight() {
+      document.getElementById(location.hash.replace(/#/, "")).className = "highlight";
+    }
+  </script>
+</head>
+<body onload="prettyPrint(); highlight();">
+  <pre class="prettyprint lang-js">var restify = require(&quot;restify&quot;);
+var Q       = require(&quot;q&quot;);
+var _       = require(&quot;underscore&quot;);
+var bunyan  = require(&quot;bunyan&quot;);
+
+var Collection = require(&quot;./collection&quot;);
+var Promise    = require(&quot;./promise&quot;);
+
+/* jshint loopfunc: true, newcap: false */
+
+(function (module) {
+    &quot;use strict&quot;;
+<span id='Service-method-constructor'><span id='Service'>    /**
+</span></span>     * @class Service
+     *
+     * The base service, providing all service functionality
+     * Includes the Service API.
+     * 
+     * @constructor
+     * @param {Object} properties A set of properties. These properties will be
+     *                 used to describe the service within the {@link Registry}.
+     *                 The constructor has some specially-handled properties:
+     * @param {Function} properties.initialize (optional)
+     *        A function called when a service is started
+     * @param {String} properties.registry (optional)
+     *        The address of a remote registry
+     */
+
+    function Service(properties) {
+        var self = this;
+        self.props = (properties || {});
+        self.logger = bunyan.createLogger({
+            name: &quot;service&quot;,
+            streams: [
+                { level: &quot;info&quot;,  stream: process.stdout },
+                { level: &quot;error&quot;, stream: process.stderr }
+            ],
+            serializers: {
+                req: bunyan.stdSerializers.req,
+                res: bunyan.stdSerializers.res
+            }
+        });
+        if (Service._logLevel !== undefined)
+            self.logger.level(Service._logLevel);
+        self.restify = restify.createServer({ log: self.logger });
+        self.restify.use(restify.bodyParser());
+        self.restify.pre(function (req, res, next) {
+            req.log.info({req: req}, &quot;start&quot;);
+            return next();
+        });
+        self.restify.on(&quot;after&quot;, function (req, res, route, e) {
+            req.log.info({res: res}, &quot;finish&quot;);
+        });
+        self.restify.on(&quot;uncaughtException&quot;, function (req, res, route, e) {
+            res.send(new restify.InternalError(e, e.message ||
+                'unexpected error'));
+            req.log.error(e.stack, &quot;finish&quot;);
+            return (true);
+        });
+        self.resMap = {};
+        self.collections = {};
+        self.isListening = false;
+        if (self.props.hasOwnProperty(&quot;initialize&quot;)) {
+            self.initialize = self.props.initialize;
+            delete self.props.initialize;
+        }
+        if (self.props.hasOwnProperty(&quot;registry&quot;)) {
+            self._registryURL = self.props.registry;
+            delete self.props.registry;
+        }
+    }
+
+<span id='Service-method-initialize'>    /**
+</span>     * @method initialize
+     * A virtual method called when the service is started.
+     */
+    Service.prototype.initialize = function () {};
+
+<span id='Service-method-registryURL'>    /**
+</span>     * @method registryURL
+     * Sets the address of a remote registry.
+     * 
+     * @param {String} address The remote URL
+     */
+    Service.prototype.registryURL = function (value) {
+        if (value !== undefined)
+            this._registryURL = value;
+        return this._registryURL;
+    };
+
+<span id='Service-static-method-logLevel'>    /**
+</span>     * @method logLevel
+     * Sets the service log-level. Used for logging.
+     * 
+     * @static
+     * @private
+     */
+    Service.logLevel = function (level) {
+        this._logLevel = level;
+        return this;
+    };
+
+<span id='Service-static-method-extend'>    /**
+</span>     * @method extend
+     * Extends the service.
+     * 
+     * @param {Object} args Arguments with which to extend
+     * @return {Service} An extended service
+     * 
+     * @static
+     */
+    Service.extend = require(&quot;./extend&quot;);
+
+    var DELEGATE_METHODS = [
+<span id='Service-method-address'>        /**
+</span>         * @method address
+         * Gets URL address info about the service
+         */
+        &quot;address&quot;,
+
+<span id='Service-method-get'>        /**
+</span>         * @method get
+         * Defines HTTP GET
+         * @param {String} path
+         * @param {Function} callback
+         * @param {ClientRequest} callback.request The server request
+         * @param {ServerResponse} callback.response The server response
+         * @param {Function} callback.next The next callback
+         */
+        &quot;get&quot;,
+
+<span id='Service-method-post'>        /**
+</span>         * @method post
+         * Defines HTTP POST
+         * @param {String} path
+         * @param {Function} callback
+         * @param {ClientRequest} callback.request The server request
+         * @param {ServerResponse} callback.response The server response
+         * @param {Function} callback.next The next callback
+         */
+        &quot;post&quot;,
+
+<span id='Service-method-put'>        /**
+</span>         * @method put
+         * Defines HTTP PUT
+         * @param {String} path
+         * @param {Function} callback
+         * @param {ClientRequest} callback.request The server request
+         * @param {ServerResponse} callback.response The server response
+         * @param {Function} callback.next The next callback
+         */
+        &quot;put&quot;,
+
+<span id='Service-method-head'>        /**
+</span>         * @method head
+         * Defines HTTP HEAD
+         * @param {String} path
+         * @param {Function} callback
+         * @param {ClientRequest} callback.request The server request
+         * @param {ServerResponse} callback.response The server response
+         * @param {Function} callback.next The next callback
+         */
+        &quot;head&quot;
+    ];
+
+<span id='Service-static-method-ensureDefaultRoutes'>    /**
+</span>     * @method
+     * Implements HTTP routes if they aren't already defined.
+     * 
+     * @private
+     * @static
+     */
+    function ensureDefaultRoutes(service) {
+        service.get('/',  function (req, res, next) {
+            var resources = {};
+            for (var key in service.resMap) {
+                if (service.resMap.hasOwnProperty(key))
+                    resources[service.url() + &quot;/&quot; + key] =
+                        service.resMap[key].schema();
+            }
+            res.send({ resources: resources });
+            return next();
+        });
+        service.head('/', function (req, res, next) {
+            res.send();
+            return next();
+        });
+        service.get(&quot;/:resource&quot;, function (req, res, next) {
+            var key = req.params.resource;
+            var content = { routes: {} };
+            var resource = service.resMap[key];
+            if (resource === undefined) {
+                return next(new Service.ResourceNotFoundError(
+                    &quot;Resource &quot; + key + &quot; not found&quot;));
+            }
+            content.schema = _.clone(resource.schema());
+            content.routes[[service.url(), key, &quot;list&quot;].join(&quot;/&quot;)] =
+                &quot;List all &quot; + key + &quot; resources&quot;;
+            res.send(content);
+            next();
+        });
+        service.post(&quot;/:resource&quot;, function (req, res, next) {
+            var key = req.params.resource;
+            var collection = service.collections[key];
+            if (collection === undefined) {
+                return next(new Service.ResourceNotFoundError(
+                    &quot;Cannot create an undefined resource&quot;
+                ));
+            }
+            var id = collection.identifier++;
+            req.body.id = id;
+            var resource = collection.add(req.body);
+            res.send({ id: id });
+        });
+        service.get(&quot;/:resource/list&quot;, function (req, res, next) {
+            var key = req.params.resource;
+            var list = fetchCollection(service, key, function (collection) {
+                res.send(collection.map(function (resource) {
+                    var id = resource.property(&quot;id&quot;);
+                    return {
+                        id:  id,
+                        url: [service.url(), key, id].join(&quot;/&quot;)
+                    };
+                }));
+            });
+        });
+        service.get(&quot;/:resource/:id&quot;, function (req, res, next) {
+            var key = req.params.resource;
+            var id  = req.params.id;
+            fetchCollection(service, key, function (collection) {
+                var found = false;
+                var i = 0;
+                while (i &lt; collection.length &amp;&amp; !found) {
+                    var resource = collection[i];
+                    if (resource.property(&quot;id&quot;) == id) {
+                        found = true;
+                        resource.fetch().done(function () {
+                            return res.send(resource.properties());
+                        }).fail(function (err) {
+                            return res.send(new Service.InvalidError(
+                                &quot;Couldn't fetch resource: &quot; + err.message
+                            ));
+                        });
+                    }
+                }
+                if (!found) {
+                    res.send(new Service.ResourceNotFoundError(
+                        &quot;Can't find &quot; + key + &quot; resource &quot; + id)
+                    );
+                }
+            });
+        });
+    }
+
+    function setResourceRoutes(service, key) {
+        var base = service.url() + &quot;/&quot; + key;
+    }
+
+<span id='Service-static-method-fetchCollection'>    /**
+</span>     * @method fetchCollection
+     * Fetch a collection from a remote endpoint.
+     * 
+     * @param {Service} service The service
+     * @param {String} key The resource key
+     * @param {Function} callback The function called when the collection is fetched
+     * 
+     * @static
+     * @private
+     */
+    function fetchCollection(service, key, callback) {
+        var collection = service.collections[key];
+        function postprocessCollection(collection) {
+            collection.fetched = true;
+            collection.forEach(function (resource) {
+                var id = resource.property(&quot;id&quot;);
+                if (id === undefined) {
+                    id = collection.identifier++;
+                    resource.property(&quot;id&quot;, id);
+                }
+                if (resource.url() === null) {
+                    resource.url = function () {
+                        return [collection.url(), id].join(&quot;/&quot;);
+                    };
+                }
+            });
+            callback(collection);
+        }
+        if (collection.fetched) {
+            callback(collection);
+        } else if (collection.url() === null) {
+            postprocessCollection(collection);
+        } else {
+            collection.fetch().done(function () {
+                postprocessCollection(collection);
+            }).fail(function (err) {
+                if (err !== undefined) {
+                    throw new Service.InternalError(
+                        &quot;Could not fetch collection: &quot; + err.message
+                    );
+                }
+            });
+        }
+    }
+
+<span id='Service-method-start'>    /**
+</span>     * @method
+     * Starts the service.
+     * 
+     * @param {Object} params Start parameters
+     * @param {Number} params.port The port on which to start the service
+     * @chainable
+     */
+    Service.prototype.start = function (params) {
+        var self = this;
+        params = params || {};
+        if (params.port === undefined) {
+            throw new Error(&quot;port is a required parameter&quot;);
+        }
+        if (self.restify.address() !== null) {
+            throw new Error(
+                &quot;service already running at &quot; + self.restify.address()
+            );
+        }
+        self.startedPromise = new Promise(self);
+        self.listen(params.port, function () {
+            self.startedPromise.resolve(true);
+        });
+        return self.startedPromise;
+    };
+
+<span id='Service-method-stop'>    /**
+</span>     * @method
+     * Stops the service.
+     * 
+     * @return {Promise}
+     */
+    Service.prototype.stop = function () {
+        var self = this;
+        var stopPromise = new Promise(self);
+        if (this.startedPromise === null) {
+            throw new Error(&quot;service has not started&quot;);
+        }
+        this.startedPromise.done(function () {
+            self.restify.close();
+            stopPromise.resolve();
+        });
+        self.isListening = false;
+        return stopPromise;
+    };
+
+<span id='Service-method-listen'>    /**
+</span>     * @method
+     * Listens to a given port. Same effect as {@link #start}, used for
+     * compatibility with Connect.
+     * 
+     * @chainable
+     */
+    Service.prototype.listen = function () {
+        this.initialize();
+        ensureDefaultRoutes(this);
+        this.isListening = true;
+        return this.restify.listen.apply(this.restify, arguments);
+    };
+
+<span id='Service-method-property'>    /**
+</span>     * @method property
+     * Gets or sets a property
+     * 
+     * @param {String} name    The name of the property
+     * @param value (optional) The value of the property
+     * @return {Mixed} The value of the property
+     */
+    Service.prototype.property = function (prop, value) {
+        if (value !== undefined) {
+            this.props[prop] = value;
+        }
+        return this.props[prop];
+    };
+
+<span id='Service-method-properties'>    /**
+</span>     * @method
+     * Gets the set of service properties.
+     * 
+     * @return The set of properties
+     */
+    Service.prototype.properties = function () {
+        return this.props;
+    };
+
+<span id='Service-method-url'>    /**
+</span>     * @method
+     * Gets the URL for the running service.
+     */
+    Service.prototype.url = function () {
+        return this.restify.url;
+    };
+    
+<span id='Service-method-client'>    /**
+</span>     * @method client
+     * Returns an HTTP client.
+     * 
+     * @param {String} url (optional) The address of the remote service
+     *     (defaults to Service#url()).
+     * @return {Client}
+     */
+    Service.prototype.client = function (url) {
+        return restify.createJsonClient({
+            url: (url || this.url())
+        });
+    };
+
+<span id='Service-method-resource'>    /**
+</span>     * @method
+     * Gets or sets a resource for this service.
+     * 
+     * @param {String} name The name of the resource
+     * @param {Resource} resource (optional) The resource to set
+     */
+    Service.prototype.resource = function (key, resource) {
+        if (resource !== undefined) {
+            this.resMap[key] = resource;
+            var isCollection = typeof(resource) === &quot;function&quot; &amp;&amp;
+                (new resource()) instanceof Collection;
+            var ProtoCollection = isCollection ?
+                resource : Collection.extend({ resource: resource });
+            this.collections[key] = new ProtoCollection();
+            this.collections[key].identifier = 1;
+            setResourceRoutes(this, key);
+        }
+        return this.resMap[key];
+    };
+
+<span id='Service-method-resources'>    /**
+</span>     * @method
+     * Gets the set of resources for this service.
+     * 
+     * @return {Object} The set of resources
+     * @return {String} return.key The key of the resource
+     * @return {Resource} return.value The resource itself
+     */
+    Service.prototype.resources = function () {
+        return this.resMap;
+    };
+
+<span id='Service-method-listening'>    /**
+</span>     * @method listening
+     * Whether the service is currently running.
+     * 
+     * @return {Boolean} Is the service running?
+     */
+    Service.prototype.listening = function () {
+        return this.isListening;
+    };
+
+    Service.prototype.registry = function () {
+        var registry = require(&quot;./registry&quot;)();
+        if (this._registryURL === undefined) {
+            var promise = new Promise();
+            promise.resolve(registry);
+            return promise;
+        } else {
+            return registry.proxy(this._registryURL);
+        }
+    };
+
+    DELEGATE_METHODS.forEach(function (method) {
+        Service.prototype[method] = function () {
+            return this.restify[method].apply(this.restify, arguments);
+        };
+    });
+
+    // Grab Restify's error classes
+    for (var fn in restify) {
+        if (restify.hasOwnProperty(fn) &amp;&amp;
+            typeof restify[fn] === &quot;function&quot; &amp;&amp;
+            fn.match(/Error$/) !== null)
+            Service[fn] = restify[fn];
+    }
+
+    module.exports = Service;
+})(module);
+
+<span id='ClientRequest'>/**
+</span> * @class ClientRequest
+ * External class, defined by the [Node.js HTTP module][1]
+ * 
+ * [1]: http://nodejs.org/api/http.html#http_class_http_clientrequest
+ */
+<span id='ServerResponse'>/**
+</span> * @class ServerResponse
+ * Defined by the [Node.js HTTP module][1]
+ * 
+ * [1]: http://nodejs.org/api/http.html#http_class_http_serverresponse
+ */
+<span id='Client'>/**
+</span> * @class Client
+ * Defined by [Restify][1]
+ * 
+ * [1]: http://mcavage.me/node-restify/#client-api
+ */
+</pre>
+</body>
+</html>

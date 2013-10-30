@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>The source code</title>
+  <link href="../resources/prettify/prettify.css" type="text/css" rel="stylesheet" />
+  <script type="text/javascript" src="../resources/prettify/prettify.js"></script>
+  <style type="text/css">
+    .highlight { display: block; background-color: #ddd; }
+  </style>
+  <script type="text/javascript">
+    function highlight() {
+      document.getElementById(location.hash.replace(/#/, "")).className = "highlight";
+    }
+  </script>
+</head>
+<body onload="prettyPrint(); highlight();">
+  <pre class="prettyprint lang-js">var Resource = require(&quot;./resource&quot;);
+var extend   = require(&quot;./extend&quot;);
+
+<span id='Collection-method-constructor'><span id='Collection'>/**
+</span></span> * @class Collection
+ * A collection of {@link Resource}s.
+ * 
+ *     @example
+ *     var Cats = Collection.extend({ url: &quot;http://catserver.com&quot; });
+ *     var cats = new Cats();
+ *     cats.add(new Resource());
+ *     cats.fetch().done(function () { ... });
+ * 
+ * A collection acts as a pseudo-{link Array}, exposing Array API (while not
+ * having an {link Array} prototype, for [very obscure reasons][1].)
+ * 
+ * [1]: http://perfectionkills.com/how-ecmascript-5-still-does-not-allow-to-subclass-an-array/
+ * @extends Resource
+ * @constructor
+ */
+(function (module) {
+    &quot;use strict&quot;;
+    var Collection = Resource.extend({
+        constructor: function (params) {
+            params = (params || {});
+            Resource.call(this, params); // super() constructor
+            this.ProtoResource = Resource;
+            if (params.resource !== undefined) {
+                this.ProtoResource = params.resource;
+            }
+            // Hack to get this to start behaving like an Array
+            this.push({}); this.pop();
+            return this;
+        }
+    });
+
+    [
+        &quot;join&quot;, &quot;reverse&quot;, &quot;sort&quot;, &quot;push&quot;, &quot;pop&quot;, &quot;shift&quot;, &quot;unshift&quot;,
+        &quot;splice&quot;, &quot;concat&quot;, &quot;slice&quot;, &quot;indexOf&quot;, &quot;lastIndexOf&quot;,
+        &quot;forEach&quot;, &quot;map&quot;, &quot;reduce&quot;, &quot;reduceRight&quot;, &quot;filter&quot;,
+        &quot;some&quot;, &quot;every&quot;, &quot;isArray&quot;
+    ].forEach(function (fn) {
+        Collection.prototype[fn] = function () {
+            return Array.prototype[fn].apply(this, arguments);
+        };
+    });
+
+<span id='Collection-method-add'>    /**
+</span>     * @method add
+     * Adds a resource to the collection.
+     * @param {Resource} resource The resource to add
+     * @chainable
+     */
+    Collection.prototype.add = function (resource) {
+        if (resource instanceof Resource) {
+            if (!(resource instanceof this.ProtoResource)) {
+                throw new Error(
+                    &quot;Collection can only contain resources of type &quot; +
+                    this.ProtoResource
+                );
+            }
+        } else { // POJO
+            resource = new this.ProtoResource(resource);
+        }
+        this.push(resource);
+        return this;
+    };
+
+<span id='Collection-method-get'>    /**
+</span>     * @method get
+     * Retrieves a resource from the collection
+     * @param {Number} index The 0-based index of the resource to fetch
+     * @return {Resource}
+     */
+    Collection.prototype.get = function (index) {
+        return this[index];
+    };
+
+<span id='Collection-method-size'>    /**
+</span>     * @method size
+     * Gets the number of items in the collection
+     * @return {Number}
+     */
+    Collection.prototype.size = function () {
+        return this.length;
+    };
+
+<span id='Collection-method-remove'>    /**
+</span>     * @method remove
+     * Removes a resource from the collection
+     * @param {Resource} resource The resource to remove
+     * @return {Resource}
+     * @throws {Error}
+     */
+    Collection.prototype.remove = function (resource) {
+        for (var i = 0; i &lt; this.length; i++) {
+            if (this[i] == resource) {
+                var removed = this.splice(i, 1);
+                return removed[0];
+            }
+        }
+        throw new Error(&quot;Cannot remove non-member resource&quot;);
+    };
+
+<span id='Collection-method-parse'>    /**
+</span>     * @method parse
+     * Parses multiple resources into the collection.
+     * @inheritdoc Resource#parse
+     */
+    Collection.prototype.parse = function (data) {
+        return data;
+    };
+
+<span id='global-method-defaultParse'>    /** @ignore */
+</span>    Collection.prototype.defaultParse = function (data) {
+        var self = this;
+        if (data !== null) {
+            if (!Array.isArray(data)) {
+                throw new TypeError(
+                    &quot;Attempting to parse non-array into collection&quot;);
+            }
+            data.forEach(function (datum) {
+                self.add(new self.ProtoResource(datum));
+            });
+        }
+        return data;
+    };
+
+<span id='Collection-static-method-extend'>    /**
+</span>     * @method extend
+     * @inheritdoc Resource#extend
+     * @static
+     */
+    Collection.extend = Resource.extend;
+
+    module.exports = Collection;
+})(module);</pre>
+</body>
+</html>
