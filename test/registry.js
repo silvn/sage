@@ -255,7 +255,7 @@ describe("Registered service", function () {
             setTimeout(function () {
                 service.registryURL().should.equal(URL);
                 done();
-            }, 10);
+            }, 150);
         });
     });
 });

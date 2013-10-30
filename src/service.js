@@ -61,12 +61,13 @@ var Promise    = require("./promise");
         self.resMap = {};
         self.collections = {};
         self.isListening = false;
+        self.registryPromise = new Promise(self);
         if (self.props.hasOwnProperty("initialize")) {
             self.initialize = self.props.initialize;
             delete self.props.initialize;
         }
         if (self.props.hasOwnProperty("registry")) {
-            self._registryURL = self.props.registry;
+            self.registryURL(self.props.registry);
             delete self.props.registry;
         }
     }
@@ -84,8 +85,10 @@ var Promise    = require("./promise");
      * @param {String} address The remote URL
      */
     Service.prototype.registryURL = function (value) {
-        if (value !== undefined)
+        if (value !== undefined) {
             this.settings.registry = value;
+            this.registryPromise.resolve(value);
+        }
         return this.settings.registry;
     };
 
@@ -194,6 +197,9 @@ var Promise    = require("./promise");
             for (var key in data) {
                 if (data.hasOwnProperty(key))
                     service.settings[key] = data[key];
+            }
+            if (data.registry !== undefined) {
+                service.registryPromise.resolve(data.registry);
             }
             res.send({ message: "Settings successfully set" });
         });
@@ -472,13 +478,13 @@ var Promise    = require("./promise");
 
     Service.prototype.registry = function () {
         var registry = require("./registry")();
-        if (this._registryURL === undefined) {
-            var promise = new Promise();
-            promise.resolve(registry);
-            return promise;
-        } else {
-            return registry.proxy(this._registryURL);
-        }
+        var promise = new Promise(this);
+        this.registryPromise.done(function (url) {
+            registry.proxy(url).done(function (proxy) {
+                promise.resolve(proxy);
+            });
+        });
+        return promise;
     };
 
     DELEGATE_METHODS.forEach(function (method) {

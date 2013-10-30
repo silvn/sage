@@ -98,9 +98,16 @@ var Restify = require("restify");
                 id = identifier++;
             }
             var promise = new Promise();
-            this.client(props.url).put("/settings", { registry: this.url() },
-            function (err, req, res) {
-            });
+            
+            /* FIXME: Slight delay to allow all services to register before
+             * the ping, so that the services are notified with the all the info
+             */
+            setTimeout(function () {
+                registry.client(props.url).put("/settings",
+                    { registry: registry.url() },
+                    function (err, req, res) {}
+                );
+            }, 100);
             services[id] = props;
             promise.resolve(id);
             return promise;
