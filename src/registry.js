@@ -54,16 +54,21 @@ var Restify = require("restify");
         });
 
         registry.post("/service", function (req, res, next) {
-            var id, body = req.body;
+            var body = req.body;
             try {
-                id = registry.add(body);
+                registry.add(body).done(function (id) {
+                    res.send(200, {
+                        message: "Service was added successfully",
+                        id: id
+                    });
+                    next();
+                }).fail(function (err) {
+                    return next(new Service.InvalidContentError(err.message));
+                });
+                return next();
             } catch (err) {
                 return next(new Service.InvalidContentError(err.message));
             }
-            res.send(200, {
-                message: "Service was added successfully",
-                id: id
-            });
         });
 
         /**
@@ -92,8 +97,18 @@ var Restify = require("restify");
             if (id === undefined) {
                 id = identifier++;
             }
+            var promise = new Promise();
+            this.client(props.url).put("/settings", { registry: this.url() },
+                function (err, req, res, obj) {
+                    if (err !== null) {
+                        promise.resolveFail(err);
+                    } else {
+                        promise.resolve(id);
+                    }
+                }
+            );
             services[id] = props;
-            return id;
+            return promise;
         };
 
         /**
@@ -151,6 +166,5 @@ var Restify = require("restify");
             };
         }
         return Registry;
-            
     }
 })(module);

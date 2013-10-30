@@ -6,7 +6,7 @@ var async     = require("async");
 var Service   = require("../src/service").logLevel("fatal");
 var Registry  = require("../src/registry")();
 
-var URL = "http://0.0.0.0:34567";
+var URL = "http://0.0.0.0:3156";
 
 function testRoute(route, body, done) {
     supertest(Registry).get(route).end(function (err, res) {
@@ -22,7 +22,7 @@ function testRoute(route, body, done) {
 
 describe("registry", function () {
     before(function (done) {
-        Registry.start({ port: 34567 });
+        Registry.start({ port: 3156 });
         done();
     });
     beforeEach(function () {
@@ -75,7 +75,8 @@ describe("registry", function () {
         testRoute("/", { services: [] }, done);
     });
     it("should allow services to be registered over HTTP", function (done) {
-        var service = new Service({ name: "newService", url: "myURL" });
+        var service = new Service({ name: "newService" });
+        service.start({ port: 8484 });
         supertest(Registry)
             .post("/service")
             .set('Accept', 'application/json')
@@ -85,13 +86,17 @@ describe("registry", function () {
                 res.status.should.equal(200);
                 var services = {};
                 services[URL + "/service/1"] = {
-                    name: "newService", url: "myURL"
+                    name: "newService",
+                    url: "http://0.0.0.0:8484"
                 };
-                testRoute("/", { services: services }, done);
+                testRoute("/", { services: services }, function () {
+                    service.stop(); done();
+                });
             });
     });
     it("should generate new ID if one not specified", function (done) {
-        var service = new Service({ name: "serviceName", url: "someURL" });
+        var service = new Service({ name: "serviceName" });
+        service.start({ port: 91919 });
         supertest(Registry)
             .post("/service")
             .set('Accept', 'application/json')
@@ -102,9 +107,12 @@ describe("registry", function () {
                 res.body.id.should.equal(1);
                 var services = {};
                 services[URL + "/service/1"] = {
-                    name: "serviceName", url: "someURL"
+                    name: "serviceName", url: service.url()
                 };
-                testRoute("/", { services: services }, done);
+                testRoute("/", { services: services }, function () {
+                    service.stop();
+                    done();
+                });
             });
     });
     it("should return a dictionary of services", function (done) {
@@ -147,7 +155,6 @@ describe("registry", function () {
             done();
         });
     });
-    it("should ping a service upon registration");
     function addService(props, port) {
         var svc = new Service(props);
         svc.start({ port: port });
@@ -186,6 +193,10 @@ describe("registry", function () {
 
 
 describe("Registered service", function () {
+    before(function (done) {
+        Registry.start({ port: 3156 });
+        done();
+    });
     beforeEach(function () {
         Registry.reset();
     });
@@ -224,14 +235,25 @@ describe("Registered service", function () {
             });
     });
     it("should be ok when URL prop defined over HTTP", function (done) {
+        var service = new Service();
+        service.start({ port: 19191 });
         supertest(Registry)
             .post("/service")
             .set('Accept', 'application/json')
-            .send({ url: "ok not really a URL but still" })
+            .send({ url: service.url() })
             .end(function (err, res) {
                 [err].should.be.null;
                 res.status.should.equal(200);
+                service.stop();
                 done();
             });
+    });
+    it("should be pinged by the registry", function (done) {
+        var service = new Service({ name: "Arby's" });
+        service.start({ port: 55755 });
+        Registry.add(service).done(function () {
+            service.registryURL().should.equal(URL);
+            done();
+        });
     });
 });

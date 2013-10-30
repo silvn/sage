@@ -47,7 +47,7 @@ describe("Collection", function () {
         collection.property("foo", "bar").should.be.ok;
         collection.property("foo").should.equal("bar");
     });
-    describe("#fetch()", function () {
+    describe("#fetch", function () {
         var app  = require("express")();
         var http = require("http");
         app.get("/cats", function (req, res) {

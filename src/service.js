@@ -29,6 +29,7 @@ var Promise    = require("./promise");
     function Service(properties) {
         var self = this;
         self.props = (properties || {});
+        self.settings = {};
         self.logger = bunyan.createLogger({
             name: "service",
             streams: [
@@ -83,7 +84,9 @@ var Promise    = require("./promise");
      * @param {String} address The remote URL
      */
     Service.prototype.registryURL = function (value) {
-        this._registryURL = value;
+        if (value !== undefined)
+            this.settings.registry = value;
+        return this.settings.registry;
     };
 
     /**
@@ -182,6 +185,17 @@ var Promise    = require("./promise");
         service.head('/', function (req, res, next) {
             res.send();
             return next();
+        });
+        service.get("/settings", function (req, res, next) {
+            res.send(service.settings);
+        });
+        service.put("/settings", function (req, res, next) {
+            var data = req.body;
+            for (var key in data) {
+                if (data.hasOwnProperty(key))
+                    service.settings[key] = data[key];
+            }
+            res.send({ message: "Settings successfully set" });
         });
         service.get("/:resource", function (req, res, next) {
             var key = req.params.resource;
@@ -353,11 +367,17 @@ var Promise    = require("./promise");
      * 
      * @chainable
      */
-    Service.prototype.listen = function () {
-        this.initialize();
-        ensureDefaultRoutes(this);
-        this.isListening = true;
-        return this.restify.listen.apply(this.restify, arguments);
+    Service.prototype.listen = function (port, callback) {
+        var self = this;
+        ensureDefaultRoutes(self);
+        self.isListening = true;
+        var ret = self.restify.listen(port, callback);
+        self.property("url", self.restify.url);
+        if (typeof(callback) === "function") {
+            callback();
+        }
+        self.initialize();
+        return ret;
     };
 
     /**
@@ -391,6 +411,20 @@ var Promise    = require("./promise");
      */
     Service.prototype.url = function () {
         return this.restify.url;
+    };
+    
+    /**
+     * @method client
+     * Returns an HTTP client.
+     * 
+     * @param {String} url (optional) The address of the remote service
+     *     (defaults to Service#url()).
+     * @return {Client}
+     */
+    Service.prototype.client = function (url) {
+        return restify.createJsonClient({
+            url: (url || this.url())
+        });
     };
 
     /**
@@ -475,4 +509,10 @@ var Promise    = require("./promise");
  * Defined by the [Node.js HTTP module][1]
  * 
  * [1]: http://nodejs.org/api/http.html#http_class_http_serverresponse
+ */
+/**
+ * @class Client
+ * Defined by [Restify][1]
+ * 
+ * [1]: http://mcavage.me/node-restify/#client-api
  */
