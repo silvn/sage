@@ -13,28 +13,31 @@ var _ = require("underscore");
  * @param {Object} args Arguments with which to extend
  * @return {Object} The extended class
  */
-module.exports = function extend(args) {
-    args = (args || {});
-    var Super = this;
-    var Extended;
+(function (module) {
+    "use strict";
+    module.exports = function extend(args) {
+        args = (args || {});
+        var Super = this;
+        var Extended;
 
-    if (args.hasOwnProperty("constructor")) {
-        Extended = args["constructor"];
-    } else {
-        Extended = function () { return Super.apply(this, arguments); };
-    }
+        if (args.hasOwnProperty("constructor")) {
+            Extended = args.constructor;
+        } else {
+            Extended = function () { return Super.apply(this, arguments); };
+        }
 
-    _.extend(Extended, Super);
+        _.extend(Extended, Super);
 
-    // Set prototype chain
-    var Proto = function () { this.constructor = Extended; };
-    Proto.prototype = Super.prototype;
-    Extended.prototype = new Proto();
+        // Set prototype chain
+        var Proto = function () { this.constructor = Extended; };
+        Proto.prototype = Super.prototype;
+        Extended.prototype = new Proto();
 
-    _.extend(Extended.prototype, args);
-    Extended.extend = extend;
+        _.extend(Extended.prototype, args);
+        Extended.extend = extend;
 
-    Extended.__super__ = Super.prototype;
+        Extended.__super__ = Super.prototype;
 
-    return Extended;
-};
+        return Extended;
+    };
+})(module);
