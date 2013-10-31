@@ -58,7 +58,44 @@ describe("Service", function () {
             done();
         });
     });
-    it("should support XML");
+    it("should support XML", function (done) {
+        var service = new Service();
+        service.get("/", function (req, res) {
+            res.send({ characters: [
+                { name: "Frodo", kind: "Hobbit" },
+                { name: "Gandalf", kind: "Wizard" }
+            ]});
+        });
+        var request = supertest(service);
+        request.get("/")
+            .set("Accept", "application/json")
+            .end(function (e1, r1) {
+                r1.body.should.eql({ characters: [
+                    { name: "Frodo", kind: "Hobbit" },
+                    { name: "Gandalf", kind: "Wizard"  }
+                ]});
+                request.get("/")
+                    .set("Accept", "text/xml")
+                    .end(function (e2, r2) {
+                        r2.text.should.equal(
+                            '<?xml version="1.0" encoding="UTF-8"?>' +
+                            '<sage>' +
+                            '<characters>' + 
+                                '<item>' +
+                                    '<name>Frodo</name>' +
+                                    '<kind>Hobbit</kind>' +
+                                '</item>' +
+                                '<item>' +
+                                    '<name>Gandalf</name>' +
+                                    '<kind>Wizard</kind>' +
+                                '</item>' +
+                            '</characters>' +
+                            '</sage>');
+                        done();
+                    });
+                    
+            });
+    });
     it("should be an event emitter");
     describe("#constructor", function () {
         it("should allow user properties", function () {

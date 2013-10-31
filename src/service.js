@@ -1,7 +1,7 @@
 var restify = require("restify");
-var Q       = require("q");
 var _       = require("underscore");
 var bunyan  = require("bunyan");
+var XML     = require("js2xmlparser");
 
 var Collection = require("./collection");
 var Promise    = require("./promise");
@@ -43,7 +43,43 @@ var Promise    = require("./promise");
         });
         if (Service._logLevel !== undefined)
             self.logger.level(Service._logLevel);
-        self.restify = restify.createServer({ log: self.logger });
+        self.restify = restify.createServer({
+            log: self.logger,
+            formatters: {
+                "text/xml": function formatXML(req, res, body, cb) {
+                    if (body instanceof Error) {
+                        res.statusCode = body.statusCode || 500;
+                        if (body.body) {
+                            body = body.body;
+                        } else {
+                            body = { message: body.message };
+                        }
+                    }
+                    var xml = XML("sage", body, {
+                        prettyPrinting: { enabled: false },
+                        wrapArray: { enabled: true }
+                    });
+                    res.setHeader('Content-Length', Buffer.byteLength(xml));
+                    return (xml);
+                },
+                "application/json": function formatJSON(req, res, body) {
+                    if (body instanceof Error) {
+                        res.statusCode = body.statusCode || 500;
+                        if (body.body) {
+                            body = body.body;
+                        } else {
+                            body = { message: body.message };
+                        }
+                    } else if (Buffer.isBuffer(body)) {
+                        body = body.toString('base64');
+                    }
+                    var data = JSON.stringify(body);
+                    res.setHeader('Content-Length', Buffer.byteLength(data));
+                    return (data);
+                }
+                
+            }
+        });
         self.restify.use(restify.bodyParser());
         self.restify.pre(function (req, res, next) {
             req.log.info({req: req}, "start");
