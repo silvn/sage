@@ -1,5 +1,5 @@
 # Sage
-**Version 0.1.1**
+**Version 0.1.2**
 
 A REST service architecture for scientific data.
 
@@ -71,6 +71,11 @@ The `sage` startup script has a general and command-specific help facility. To f
 TODO
 
 ##Changelog
+
+####v0.1.2
+
+* Handling URL templates for resource fetching.
+* Bugs zapped.
 
 ####v0.1.1
 
