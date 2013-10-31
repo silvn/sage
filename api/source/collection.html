@@ -134,7 +134,7 @@ var extend   = require(&quot;./extend&quot;);
     Collection.prototype.parse = function (data) {
         return data;
     };
-
+    
 <span id='global-method-defaultParse'>    /** @ignore */
 </span>    Collection.prototype.defaultParse = function (data) {
         var self = this;
@@ -144,7 +144,8 @@ var extend   = require(&quot;./extend&quot;);
                     &quot;Attempting to parse non-array into collection&quot;);
             }
             data.forEach(function (datum) {
-                self.add(new self.ProtoResource(datum));
+                var resource = new self.ProtoResource(datum);
+                self.add(resource);
             });
         }
         return data;
