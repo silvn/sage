@@ -291,7 +291,8 @@ describe("Service", function () {
         });
         it("should describe a single resource", function (done) {
             var expectedRoutes = {};
-            expectedRoutes[URL + "/protein/list"] = "List all protein resources";
+            expectedRoutes[URL + "/protein/list"] =
+                "List all protein resources";
             request.get("/protein").end(function (err, res) {
                 [err].should.be.null;
                 res.status.should.equal(200);
@@ -304,7 +305,8 @@ describe("Service", function () {
         });
         it("should include schema in resource description", function (done) {
             var expectedRoutes = {};
-            expectedRoutes[URL + "/baseball/list"] = "List all baseball resources";
+            expectedRoutes[URL + "/baseball/list"] =
+                "List all baseball resources";
             request.get("/baseball").end(function (err, res) {
                 [err].should.be.null;
                 res.status.should.equal(200);
@@ -326,7 +328,8 @@ describe("Service", function () {
                 done();
             });
         });
-        it("should return 404 on POST to nonexistent resource", function (done) {
+        it("should return 404 on POST to nonexistent resource",
+        function (done) {
             request.post("/notaresource").send({}).end(function (err, res) {
                 res.status.should.equal(404);
                 res.body.should.eql({
@@ -432,6 +435,38 @@ describe("Service", function () {
                     name: "Felix",
                     breed: "Persian",
                     legs: 4
+                });
+                done();
+            });
+        });
+        it("should defer to a single resource URL", function (done) {
+            app.get("/beers", function (req, res) {
+                res.send(200, [
+                    { id: 1, brand: "SamAdams" },
+                    { id: 2, brand: "Leffe" },
+                    { id: 3, brand: "Shiner" }
+                ]);
+            });
+            app.get("/beer/brand/:brand", function (req, res) {
+                res.send(200, {
+                    brand: "The " + req.params.brand + " Company",
+                    type:  "Bock"
+                });
+            });
+            var Beer = Resource.extend({
+                brand: { type: "string" },
+                url: LIST_URL + "/beer/brand/<%= brand %>"
+            });
+            var Beers = Collection.extend({
+                resource: Beer,
+                url: LIST_URL + "/beers"
+            });
+            service.resource("beer", Beers);
+            request.get("/beer/2").end(function (err, res) {
+                res.body.should.eql({
+                    id: 2,
+                    brand: "The Leffe Company",
+                    type: "Bock"
                 });
                 done();
             });

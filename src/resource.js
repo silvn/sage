@@ -3,6 +3,7 @@ var Promise     = require("./promise");
 var Revalidator = require("revalidator");
 var Restify     = require("restify");
 var URL         = require("url");
+var _           = require("underscore");
 
 (function (module) {
     "use strict";
@@ -77,7 +78,8 @@ var URL         = require("url");
                 promise.resolveFail(exception);
             }
         } else {
-            url = URL.parse(self.url());
+            var urlString = _.template(self.url())(self.properties());
+            url = URL.parse(urlString);
             if (self.client === undefined) {
                 self.client = Restify.createJsonClient({
                     url: URL.format({
@@ -197,7 +199,7 @@ var URL         = require("url");
         }
         RES_OPTIONS.forEach(function (option) {
             if (args.hasOwnProperty(option)) {
-                schema[option] = undefined;
+                delete schema[option];
                 if (typeof(args[option]) === "function") {
                     Extended[option] = Extended.prototype[option] =
                         args[option];

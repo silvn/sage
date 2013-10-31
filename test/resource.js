@@ -31,6 +31,16 @@ describe("Resource", function () {
         resource.url().should.equal("http://cnn.com");
         ExtendedResource.url().should.equal("http://cnn.com");
     });
+    it("shouldn't treat url as a schema property", function () {
+        var Extended = Resource.extend({
+            url: "someURL",
+            prop: { type: "string", required: true }
+        });
+        var resource = new Extended();
+        resource.schema().should.eql({
+            prop: { type: "string", required: true }            
+        });
+    })
     it("should return a null URL when not specified in extend()", function () {
         var AResource = Resource.extend();
         [AResource.url()].should.be.null;
