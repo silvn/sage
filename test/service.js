@@ -58,6 +58,8 @@ describe("Service", function () {
             done();
         });
     });
+    it("should support XML");
+    it("should be an event emitter");
     describe("#constructor", function () {
         it("should allow user properties", function () {
             var service = new Service({ name: "namedService" });
@@ -225,7 +227,6 @@ describe("Service", function () {
             });
         });
     });
-
     describe("Resource API", function () {
         var service = new Service();
         var request = supertest(service);
@@ -370,6 +371,20 @@ describe("Service", function () {
                     getCalled.should.equal(1);
                     done();
                 });
+            });
+        });
+        it("should show schema for resource collections", function (done) {
+            var Cat = Resource.extend({ breed: { type: "string" } });
+            var Cats = Collection.extend({ resource: Cat });
+            service.resource("bred-cat", Cats);
+            request.get("/").end(function (err, res) {
+                [err].should.be.null;
+                var resources = res.body.resources;
+                resources.should.have.property("http://0.0.0.0:9876/bred-cat");
+                resources["http://0.0.0.0:9876/bred-cat"].should.eql({
+                    breed: { type: "string" }
+                });
+                done();
             });
         });
         it("should fetch a single resource", function (done) {

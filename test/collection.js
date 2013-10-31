@@ -30,6 +30,14 @@ describe("Collection", function () {
     it("should throw when trying to remove non-member", function () {
         (function () { collection.remove(new Resource()); }).should.throw();
     });
+    it("should accept a resource as an extend parameter", function () {
+        var Beer = Resource.extend({ ounces: { type: "number" }});
+        var Beers = Collection.extend({ resource: Beer });
+        var beers = new Beers();
+        beers.add(new Beer()).should.be.ok;
+        beers.length.should.equal(1);
+        (function () { beers.add(new Resource()); }).should.throw();
+    });
     it("should accept a resource as a constructor argument", function () {
         var Color = Resource.extend({ name: { type: "string" } });
         var collection = new Collection({ resource: Color });
@@ -46,6 +54,13 @@ describe("Collection", function () {
     it("should set and get properties", function () {
         collection.property("foo", "bar").should.be.ok;
         collection.property("foo").should.equal("bar");
+    });
+    it("should return the resource model's schema", function () {
+        var Movie = Resource.extend({ title: { type: "string" }});
+        var Movies = Collection.extend({ resource: Movie });
+        var movies = new Movies();
+        Movies.schema().should.eql({ title: { type: "string" } });
+        movies.schema().should.eql({ title: { type: "string" } });
     });
     describe("#fetch", function () {
         var app  = require("express")();
