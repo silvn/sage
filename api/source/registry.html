@@ -71,16 +71,21 @@ var Restify = require(&quot;restify&quot;);
         });
 
         registry.post(&quot;/service&quot;, function (req, res, next) {
-            var id, body = req.body;
+            var body = req.body;
             try {
-                id = registry.add(body);
+                registry.add(body).done(function (id) {
+                    res.send(200, {
+                        message: &quot;Service was added successfully&quot;,
+                        id: id
+                    });
+                    next();
+                }).fail(function (err) {
+                    return next(new Service.InvalidContentError(err.message));
+                });
+                return next();
             } catch (err) {
                 return next(new Service.InvalidContentError(err.message));
             }
-            res.send(200, {
-                message: &quot;Service was added successfully&quot;,
-                id: id
-            });
         });
 
 <span id='Registry-method-add'>        /**
@@ -99,11 +104,6 @@ var Restify = require(&quot;restify&quot;);
                 id = service.property(&quot;id&quot;);
                 props = service.properties();
                 props.url = service.url();
-                this.client.post(&quot;/settings&quot;, { registry: this.url() },
-                    function (err, req, res, obj) {
-                        console.log(err, res.status, res.body);
-                    }
-                );
             } else {
                 if (service.url === undefined) {
                     throw new Error(&quot;URL property is not defined&quot;);
@@ -114,8 +114,20 @@ var Restify = require(&quot;restify&quot;);
             if (id === undefined) {
                 id = identifier++;
             }
+            var promise = new Promise();
+            
+            /* FIXME: Slight delay to allow all services to register before
+             * the ping, so that the services are notified with the all the info
+             */
+            setTimeout(function () {
+                registry.client(props.url).put(&quot;/settings&quot;,
+                    { registry: registry.url() },
+                    function (err, req, res) {}
+                );
+            }, 100);
             services[id] = props;
-            return id;
+            promise.resolve(id);
+            return promise;
         };
 
 <span id='Registry-method-find'>        /**
@@ -173,7 +185,6 @@ var Restify = require(&quot;restify&quot;);
             };
         }
         return Registry;
-            
     }
 })(module);</pre>
 </body>

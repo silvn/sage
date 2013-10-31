@@ -16,9 +16,9 @@
 </head>
 <body onload="prettyPrint(); highlight();">
   <pre class="prettyprint lang-js">var restify = require(&quot;restify&quot;);
-var Q       = require(&quot;q&quot;);
 var _       = require(&quot;underscore&quot;);
 var bunyan  = require(&quot;bunyan&quot;);
+var XML     = require(&quot;js2xmlparser&quot;);
 
 var Collection = require(&quot;./collection&quot;);
 var Promise    = require(&quot;./promise&quot;);
@@ -46,6 +46,7 @@ var Promise    = require(&quot;./promise&quot;);
     function Service(properties) {
         var self = this;
         self.props = (properties || {});
+        self.settings = {};
         self.logger = bunyan.createLogger({
             name: &quot;service&quot;,
             streams: [
@@ -59,7 +60,43 @@ var Promise    = require(&quot;./promise&quot;);
         });
         if (Service._logLevel !== undefined)
             self.logger.level(Service._logLevel);
-        self.restify = restify.createServer({ log: self.logger });
+        self.restify = restify.createServer({
+            log: self.logger,
+            formatters: {
+                &quot;text/xml&quot;: function formatXML(req, res, body, cb) {
+                    if (body instanceof Error) {
+                        res.statusCode = body.statusCode || 500;
+                        if (body.body) {
+                            body = body.body;
+                        } else {
+                            body = { message: body.message };
+                        }
+                    }
+                    var xml = XML(&quot;sage&quot;, body, {
+                        prettyPrinting: { enabled: false },
+                        wrapArray: { enabled: true }
+                    });
+                    res.setHeader('Content-Length', Buffer.byteLength(xml));
+                    return (xml);
+                },
+                &quot;application/json&quot;: function formatJSON(req, res, body) {
+                    if (body instanceof Error) {
+                        res.statusCode = body.statusCode || 500;
+                        if (body.body) {
+                            body = body.body;
+                        } else {
+                            body = { message: body.message };
+                        }
+                    } else if (Buffer.isBuffer(body)) {
+                        body = body.toString('base64');
+                    }
+                    var data = JSON.stringify(body);
+                    res.setHeader('Content-Length', Buffer.byteLength(data));
+                    return (data);
+                }
+                
+            }
+        });
         self.restify.use(restify.bodyParser());
         self.restify.pre(function (req, res, next) {
             req.log.info({req: req}, &quot;start&quot;);
@@ -77,12 +114,13 @@ var Promise    = require(&quot;./promise&quot;);
         self.resMap = {};
         self.collections = {};
         self.isListening = false;
+        self.registryPromise = new Promise(self);
         if (self.props.hasOwnProperty(&quot;initialize&quot;)) {
             self.initialize = self.props.initialize;
             delete self.props.initialize;
         }
         if (self.props.hasOwnProperty(&quot;registry&quot;)) {
-            self._registryURL = self.props.registry;
+            self.registryURL(self.props.registry);
             delete self.props.registry;
         }
     }
@@ -100,9 +138,11 @@ var Promise    = require(&quot;./promise&quot;);
      * @param {String} address The remote URL
      */
     Service.prototype.registryURL = function (value) {
-        if (value !== undefined)
-            this._registryURL = value;
-        return this._registryURL;
+        if (value !== undefined) {
+            this.settings.registry = value;
+            this.registryPromise.resolve(value);
+        }
+        return this.settings.registry;
     };
 
 <span id='Service-static-method-logLevel'>    /**
@@ -201,6 +241,20 @@ var Promise    = require(&quot;./promise&quot;);
         service.head('/', function (req, res, next) {
             res.send();
             return next();
+        });
+        service.get(&quot;/settings&quot;, function (req, res, next) {
+            res.send(service.settings);
+        });
+        service.put(&quot;/settings&quot;, function (req, res, next) {
+            var data = req.body;
+            for (var key in data) {
+                if (data.hasOwnProperty(key))
+                    service.settings[key] = data[key];
+            }
+            if (data.registry !== undefined) {
+                service.registryPromise.resolve(data.registry);
+            }
+            res.send({ message: &quot;Settings successfully set&quot; });
         });
         service.get(&quot;/:resource&quot;, function (req, res, next) {
             var key = req.params.resource;
@@ -372,11 +426,17 @@ var Promise    = require(&quot;./promise&quot;);
      * 
      * @chainable
      */
-    Service.prototype.listen = function () {
-        this.initialize();
-        ensureDefaultRoutes(this);
-        this.isListening = true;
-        return this.restify.listen.apply(this.restify, arguments);
+    Service.prototype.listen = function (port, callback) {
+        var self = this;
+        ensureDefaultRoutes(self);
+        self.isListening = true;
+        var ret = self.restify.listen(port, callback);
+        self.property(&quot;url&quot;, self.restify.url);
+        if (typeof(callback) === &quot;function&quot;) {
+            callback();
+        }
+        self.initialize();
+        return ret;
     };
 
 <span id='Service-method-property'>    /**
@@ -471,13 +531,13 @@ var Promise    = require(&quot;./promise&quot;);
 
     Service.prototype.registry = function () {
         var registry = require(&quot;./registry&quot;)();
-        if (this._registryURL === undefined) {
-            var promise = new Promise();
-            promise.resolve(registry);
-            return promise;
-        } else {
-            return registry.proxy(this._registryURL);
-        }
+        var promise = new Promise(this);
+        this.registryPromise.done(function (url) {
+            registry.proxy(url).done(function (proxy) {
+                promise.resolve(proxy);
+            });
+        });
+        return promise;
     };
 
     DELEGATE_METHODS.forEach(function (method) {
