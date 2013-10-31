@@ -23,13 +23,20 @@ var extend   = require("./extend");
     var Collection = Resource.extend({
         constructor: function (params) {
             params = (params || {});
-            Resource.call(this, params); // super() constructor
-            this.ProtoResource = Resource;
+            this.props = {};
+            this.ProtoResource = (this.ProtoResource || Resource);
             if (params.resource !== undefined) {
                 this.ProtoResource = params.resource;
             }
+
+            /* super() constructor must be called *after* ProtoResource is set
+             * for proper validation
+             */
+            Resource.call(this, params);
+
             // Hack to get this to start behaving like an Array
             this.push({}); this.pop();
+
             return this;
         }
     });
@@ -125,13 +132,51 @@ var extend   = require("./extend");
         }
         return data;
     };
+    
+    /**
+     * @method schema
+     * Returns the schema for the {link Resource} associated with the
+     * collection, if any.
+     * 
+     * @return {Object} The schema
+     * @override
+     */
+    Collection.prototype.schema = function () {
+        return this.ProtoResource.schema();
+    };
+
+    /**
+     * @method property
+     * Gets or sets a property on this collection. Note that unlike with
+     * standard resources, collection properties are not validated.
+     * 
+     * @param {String} key   The property's key
+     * @param {Mixed}  value The property's value
+     * @return {Mixed}       The property's value
+     * @override
+     */
+    Collection.prototype.property = function (key, value) {
+        if (value !== undefined) {
+            this.props[key] = value;
+        }
+        return this.props[key];
+    };
 
     /**
      * @method extend
      * @inheritdoc Resource#extend
      * @static
      */
-    Collection.extend = Resource.extend;
+    Collection.extend = function (params) {
+        var Extended = Resource.extend.apply(this, arguments);
+        if (params.hasOwnProperty("resource")) {
+            Extended.prototype.ProtoResource = params.resource;
+            Extended.schema = Extended.prototype.schema = function () {
+                return params.resource.schema();
+            };
+        }
+        return Extended;
+    };
 
     module.exports = Collection;
 })(module);

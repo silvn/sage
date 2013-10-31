@@ -46,14 +46,10 @@ describe("Resource", function () {
     });
     it("should have a static schema function", function () {
         (new Resource()).schema.should.be.a.Function;
-        var Mouse = Resource.extend({
-            weight: { type: "number" }
-        });
+        var Mouse = Resource.extend({ weight: { type: "number" } });
         var mouse = new Mouse();
-        mouse.schema().should.eql({
-            weight: { type: "number" }
-        });
-        Mouse.schema.should.equal(mouse.schema);
+        mouse.schema().should.eql({ weight: { type: "number" } });
+        Mouse.schema().should.eql({ weight: { type: "number" } });
     });
     it("should return an empty schema on the base class", function () {
         Resource.schema.should.be.a.Function;
