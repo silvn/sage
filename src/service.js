@@ -296,6 +296,7 @@ var Promise    = require("./promise");
                             ));
                         });
                     }
+                    i++;
                 }
                 if (!found) {
                     res.send(new Service.ResourceNotFoundError(
@@ -316,7 +317,8 @@ var Promise    = require("./promise");
      * 
      * @param {Service} service The service
      * @param {String} key The resource key
-     * @param {Function} callback The function called when the collection is fetched
+     * @param {Function} callback The function called when the collection
+     *                            is fetched
      * 
      * @static
      * @private

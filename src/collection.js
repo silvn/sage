@@ -117,7 +117,7 @@ var extend   = require("./extend");
     Collection.prototype.parse = function (data) {
         return data;
     };
-
+    
     /** @ignore */
     Collection.prototype.defaultParse = function (data) {
         var self = this;
@@ -127,7 +127,8 @@ var extend   = require("./extend");
                     "Attempting to parse non-array into collection");
             }
             data.forEach(function (datum) {
-                self.add(new self.ProtoResource(datum));
+                var resource = new self.ProtoResource(datum);
+                self.add(resource);
             });
         }
         return data;

@@ -3,6 +3,7 @@ var Promise     = require("./promise");
 var Revalidator = require("revalidator");
 var Restify     = require("restify");
 var URL         = require("url");
+var _           = require("underscore");
 
 (function (module) {
     "use strict";
@@ -36,10 +37,34 @@ var URL         = require("url");
      *         alert(this.properties())
      *     });
      * 
+     * The URL itself can be an ERB-style template. Sage will inject the
+     * current resource properties into the URL.
+     * 
+     * Data that is remotely fetched can also be specially parsed by providing
+     * a `parse` function in the constructor:
+     * 
+     *     @example
+     *     var Cat = Resource.extend({
+     *         url: "http://catserver.com/cat/breed/<%= breed %>",
+     *         fetch: function (data) {
+     *             data.name = "Felix";
+     *             return data;
+     *         }
+     *     });
+     *     var cat = new Cat({ breed: "Cheshire" });
+     *     cat.fetch().done(function () { alert(this.properties()); });
+     * 
      * @constructor
      * Creates a resource.
      * 
-     * @param {Object} properties A set of initial properties
+     * @param {Object} properties A set of resource properties.
+     *                 The constructor has some specially-handled properties:
+     * @param {Function} properties.parse (optional)
+     *        A parser of remotely-fetched data. Returns the parsed data;
+     *        if null, the resource will remain untouched.
+     * @param {Object} properties.parse.data The incoming remote data
+     * @param {String} properties.url (optional)
+     *        A plain URL or a URL template that will be interpolated on #fetch
      */
     function Resource(properties) {
         var name;
@@ -77,7 +102,8 @@ var URL         = require("url");
                 promise.resolveFail(exception);
             }
         } else {
-            url = URL.parse(self.url());
+            var urlString = _.template(self.url())(self.properties());
+            url = URL.parse(urlString);
             if (self.client === undefined) {
                 self.client = Restify.createJsonClient({
                     url: URL.format({
@@ -197,7 +223,7 @@ var URL         = require("url");
         }
         RES_OPTIONS.forEach(function (option) {
             if (args.hasOwnProperty(option)) {
-                schema[option] = undefined;
+                delete schema[option];
                 if (typeof(args[option]) === "function") {
                     Extended[option] = Extended.prototype[option] =
                         args[option];
