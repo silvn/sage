@@ -62,6 +62,12 @@ describe("Collection", function () {
         Movies.schema().should.eql({ title: { type: "string" } });
         movies.schema().should.eql({ title: { type: "string" } });
     });
+    it("should still support collection properties", function () {
+        var Movie = Resource.extend({ title: { type: "string" }});
+        var Movies = Collection.extend({ resource: Movie });
+        var movies = new Movies();
+        movies.property("title", 6).should.be.ok;
+    });
     describe("#fetch", function () {
         var app  = require("express")();
         var http = require("http");
