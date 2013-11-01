@@ -109,6 +109,35 @@ var Promise    = require("./promise");
             delete self.props.registry;
         }
     }
+
+    /**
+     * @method on
+     * Adds a listener for the specified event.
+     * 
+     * @param {String} event The event to listen to
+     * @param {Function} callback The event callback
+     * @param {Object} callback.data (optional) The data emitted with the event
+     * 
+     * @chainable
+     */
+    /**
+     * @method off
+     * Removes a listener for the specified event.
+     * 
+     * @param {String} event The event
+     * @param {Function} callback The event callback
+     * 
+     * @chainable
+     */
+    /**
+     * @method emit
+     * Emits an event with some data.
+     * 
+     * @param {String} event The event to listen to
+     * @param {Object} [data] (optional) The data to emit
+     * 
+     * @chainable
+     */
     util.inherits(Service, events.EventEmitter);
 
     /**
