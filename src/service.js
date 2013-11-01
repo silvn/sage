@@ -1,3 +1,5 @@
+var util    = require("util");
+var events  = require("events");
 var restify = require("restify");
 var _       = require("underscore");
 var bunyan  = require("bunyan");
@@ -107,6 +109,7 @@ var Promise    = require("./promise");
             delete self.props.registry;
         }
     }
+    util.inherits(Service, events.EventEmitter);
 
     /**
      * @method initialize
