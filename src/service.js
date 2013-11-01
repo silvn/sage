@@ -268,13 +268,18 @@ var Promise    = require("./promise");
         });
         service.get("/:resource/list", function (req, res, next) {
             var key = req.params.resource;
-            var list = fetchCollection(service, key, function (collection) {
+            fetchCollection(service, key, function (collection) {
+                var listProps = service.collections[key].listProps;
                 res.send(collection.map(function (resource) {
                     var id = resource.property("id");
-                    return {
+                    var props = {
                         id:  id,
                         url: [service.url(), key, id].join("/")
                     };
+                    listProps.forEach(function (prop) {
+                        props[prop] = resource.property(prop);
+                    });
+                    return props;
                 }));
             });
         });
@@ -478,8 +483,9 @@ var Promise    = require("./promise");
      * @param {String} name The name of the resource
      * @param {Resource} resource (optional) The resource to set
      */
-    Service.prototype.resource = function (key, resource) {
+    Service.prototype.resource = function (key, resource, options) {
         if (resource !== undefined) {
+            options = (options || {});
             this.resMap[key] = resource;
             var isCollection = typeof(resource) === "function" &&
                 (new resource()) instanceof Collection;
@@ -487,6 +493,7 @@ var Promise    = require("./promise");
                 resource : Collection.extend({ resource: resource });
             this.collections[key] = new ProtoCollection();
             this.collections[key].identifier = 1;
+            this.collections[key].listProps = (options.listProperties || []);
             setResourceRoutes(this, key);
         }
         return this.resMap[key];

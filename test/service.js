@@ -361,6 +361,52 @@ describe("Service", function () {
                 });
             });
         });
+        it("should list resource properties using options", function (done) {
+            var Car = Resource.extend({
+                make: { type: "string" },
+                model: { type: "string" },
+                year: { type: "number" }
+            });
+            service.resource("car", Car, { listProperties: ["make", "model" ]});
+            var count = 0;
+            var cars = [
+                { make: "Toyota",  model: "Prius",  year: 2005 },
+                { make: "Nissan",  model: "Stanza", year: 2008 },
+                { make: "Ford",    model: "Taurus", year: 1998 }
+            ];
+            cars.forEach(function (car) {
+                request.post("/car").send(car).end(function (err1, res1) {
+                    [err1].should.be.null;
+                    res1.status.should.equal(200);
+                    count++;
+                    if (count == cars.length) {
+                        request.get("/car/list").end(function (err2, res2) {
+                            res2.body.should.eql([
+                                {
+                                    id: 1,
+                                    url: URL + "/car/1",
+                                    make: "Toyota",
+                                    model: "Prius"
+                                },
+                                {
+                                    id: 2,
+                                    url: URL + "/car/2",
+                                    make: "Nissan",
+                                    model: "Stanza"
+                                },
+                                {
+                                    id: 3,
+                                    url: URL + "/car/3",
+                                    make: "Ford",
+                                    model: "Taurus"
+                                }
+                            ]);
+                            done();
+                        });
+                    }
+                });
+            });
+        });
         var app = express();
         var http = require("http");
         app.get("/cats", function (req, res) {
