@@ -1,8 +1,6 @@
 var supertest  = require("supertest");
 var express    = require("express");
 var util       = require("util");
-var async      = require("async");
-var spawn      = require("child_process").spawn;
 
 var Service    = require("../src/service").logLevel("fatal");
 var Resource   = require("../src/resource");
@@ -96,7 +94,19 @@ describe("Service", function () {
                     
             });
     });
-    it("should be an event emitter");
+    it("should be an event emitter", function (done) {
+        var service = new Service({
+            initialize: function () {
+                this.emit("test-event", { type: "wedding" });
+            }
+        });
+        service.on("test-event", function (obj) {
+            obj.should.eql({ type: "wedding" });
+            service.stop();
+            done();
+        });
+        service.start({ port: 43434 });
+    });
     describe("#constructor", function () {
         it("should allow user properties", function () {
             var service = new Service({ name: "namedService" });
