@@ -15,7 +15,9 @@
   </script>
 </head>
 <body onload="prettyPrint(); highlight();">
-  <pre class="prettyprint lang-js">var restify = require(&quot;restify&quot;);
+  <pre class="prettyprint lang-js">var util    = require(&quot;util&quot;);
+var events  = require(&quot;events&quot;);
+var restify = require(&quot;restify&quot;);
 var _       = require(&quot;underscore&quot;);
 var bunyan  = require(&quot;bunyan&quot;);
 var XML     = require(&quot;js2xmlparser&quot;);
@@ -124,6 +126,36 @@ var Promise    = require(&quot;./promise&quot;);
             delete self.props.registry;
         }
     }
+
+<span id='Service-method-on'>    /**
+</span>     * @method on
+     * Adds a listener for the specified event.
+     * 
+     * @param {String} event The event to listen to
+     * @param {Function} callback The event callback
+     * @param {Object} callback.data (optional) The data emitted with the event
+     * 
+     * @chainable
+     */
+<span id='Service-method-off'>    /**
+</span>     * @method off
+     * Removes a listener for the specified event.
+     * 
+     * @param {String} event The event
+     * @param {Function} callback The event callback
+     * 
+     * @chainable
+     */
+<span id='Service-method-emit'>    /**
+</span>     * @method emit
+     * Emits an event with some data.
+     * 
+     * @param {String} event The event to listen to
+     * @param {Object} [data] (optional) The data to emit
+     * 
+     * @chainable
+     */
+    util.inherits(Service, events.EventEmitter);
 
 <span id='Service-method-initialize'>    /**
 </span>     * @method initialize
@@ -285,13 +317,18 @@ var Promise    = require(&quot;./promise&quot;);
         });
         service.get(&quot;/:resource/list&quot;, function (req, res, next) {
             var key = req.params.resource;
-            var list = fetchCollection(service, key, function (collection) {
+            fetchCollection(service, key, function (collection) {
+                var listProps = service.collections[key].listProps;
                 res.send(collection.map(function (resource) {
                     var id = resource.property(&quot;id&quot;);
-                    return {
+                    var props = {
                         id:  id,
                         url: [service.url(), key, id].join(&quot;/&quot;)
                     };
+                    listProps.forEach(function (prop) {
+                        props[prop] = resource.property(prop);
+                    });
+                    return props;
                 }));
             });
         });
@@ -495,8 +532,9 @@ var Promise    = require(&quot;./promise&quot;);
      * @param {String} name The name of the resource
      * @param {Resource} resource (optional) The resource to set
      */
-    Service.prototype.resource = function (key, resource) {
+    Service.prototype.resource = function (key, resource, options) {
         if (resource !== undefined) {
+            options = (options || {});
             this.resMap[key] = resource;
             var isCollection = typeof(resource) === &quot;function&quot; &amp;&amp;
                 (new resource()) instanceof Collection;
@@ -504,6 +542,7 @@ var Promise    = require(&quot;./promise&quot;);
                 resource : Collection.extend({ resource: resource });
             this.collections[key] = new ProtoCollection();
             this.collections[key].identifier = 1;
+            this.collections[key].listProps = (options.listProperties || []);
             setResourceRoutes(this, key);
         }
         return this.resMap[key];
