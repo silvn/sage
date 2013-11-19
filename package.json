@@ -1,5 +1,5 @@
 {
-    "name"         : "sage"
+    "name"         : "node-sage"
   , "version"      : "0.1.4"
   , "repository": {
         "type"  : "git"
