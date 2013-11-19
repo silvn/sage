@@ -3,10 +3,10 @@ var events  = require("events");
 var restify = require("restify");
 var _       = require("underscore");
 var bunyan  = require("bunyan");
-var XML     = require("js2xmlparser");
 
 var Collection = require("./collection");
 var Promise    = require("./promise");
+var Formatters = require("./formatters");
 
 /* jshint loopfunc: true, newcap: false */
 
@@ -48,40 +48,11 @@ var Promise    = require("./promise");
         self.restify = restify.createServer({
             log: self.logger,
             formatters: {
-                "text/xml": function formatXML(req, res, body, cb) {
-                    if (body instanceof Error) {
-                        res.statusCode = body.statusCode || 500;
-                        if (body.body) {
-                            body = body.body;
-                        } else {
-                            body = { message: body.message };
-                        }
-                    }
-                    var xml = XML("sage", body, {
-                        prettyPrinting: { enabled: false },
-                        wrapArray: { enabled: true }
-                    });
-                    res.setHeader('Content-Length', Buffer.byteLength(xml));
-                    return (xml);
-                },
-                "application/json": function formatJSON(req, res, body) {
-                    if (body instanceof Error) {
-                        res.statusCode = body.statusCode || 500;
-                        if (body.body) {
-                            body = body.body;
-                        } else {
-                            body = { message: body.message };
-                        }
-                    } else if (Buffer.isBuffer(body)) {
-                        body = body.toString('base64');
-                    }
-                    var data = JSON.stringify(body);
-                    res.setHeader('Content-Length', Buffer.byteLength(data));
-                    return (data);
-                }
-                
+                "text/xml":         Formatters.formatXML,
+                "application/json": Formatters.formatJSON,
             }
         });
+        self.restify.use(restify.acceptParser(self.restify.acceptable));
         self.restify.use(restify.bodyParser());
         self.restify.pre(function (req, res, next) {
             req.log.info({req: req}, "start");

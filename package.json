@@ -15,7 +15,7 @@
       , "less-middleware"  : ">=0.1.12"
       , "node-gyp"         : ">=0.10.10"
       , "optimist"         : ">=0.3.7"
-      , "restify"          : ">=2.6.0"
+      , "restify"          : "git://github.com/mcavage/node-restify#master"
       , "underscore"       : ">=1.5.2"
       , "web-cache"        : ">=0.0.3"
       , "xmlhttprequest"   : ">=1.6.0"
