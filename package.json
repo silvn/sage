@@ -1,13 +1,14 @@
 {
-    "name"         : "sage"
-  , "version"      : "0.1.4"
-  , "repository": {
-        "type"  : "git"
-      , "url"   : "github.com:silvn/sage"
+    "name"         : "node-sage"
+  , "description"  : "An HTTP service architecture for scientific data"
+  , "version"      : "0.1.5"
+  , "repository"   : {
+        "type"     : "git"
+      , "url"      : "github.com:silvn/sage"
   }
-  , "author": {
-       "name"   : "Shiran Pasternak"
-     , "email"  : "shiranpasternak@gmail.com"
+  , "author"       : {
+       "name"      : "Shiran Pasternak"
+     , "email"     : "shiranpasternak@gmail.com"
    }
   , "license": "MIT"
   , "homepage": "https://github.com/silvn/sage"
