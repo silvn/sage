@@ -1,7 +1,7 @@
 # Sage
-**Version 0.1.4**
+An HTTP service architecture for scientific data.
 
-A REST service architecture for scientific data.
+**Version 0.1.5**
 
 [![Build Status](https://travis-ci.org/silvn/sage.png)](https://travis-ci.org/silvn/sage)
 
@@ -72,9 +72,10 @@ TODO
 
 ##Changelog
 
-####v0.1.4
+####v0.1.5
 
 * Bug fixes
+* Project info update
 
 ####v0.1.3
 
